@@ -1,0 +1,69 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold" style="color: #0a3d62;">Patient Registry</h2>
+        <form method="GET" class="d-flex" style="max-width: 400px;">
+            <input type="text" name="q" class="form-control rounded-pill-start" placeholder="Search by name or ID...">
+            <button type="submit" class="btn btn-primary rounded-pill-end" style="background-color: #0a3d62;">Search</button>
+        </form>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Patient ID</th>
+                                <th>Full Name</th>
+                                <th>Gender</th>
+                                <th class="text-end pe-4">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for patient in patients %}
+                            <tr>
+                                <td class="ps-4">#PCHIS-{{ patient.id|add:"1000" }}</td>
+                                <td class="fw-bold">{{ patient.get_full_name }}</td>
+                                <td>{{ patient.gender|default:"Not Specified" }}</td>
+                                <td class="text-end pe-4">
+                                    <a href="{% url 'records:view_patient_history' patient.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">View History</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-4">No patients found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0">Recent Activity</h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for record in records %}
+                        <li class="list-group-item border-0 px-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="small fw-bold">{{ record.patient.get_full_name }}</span>
+                                <small class="text-muted">{{ record.uploaded_at|date:"M d" }}</small>
+                            </div>
+                            <div class="text-primary small opacity-75 text-truncate">{{ record.description }}</div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-center py-4 text-muted small">No recent updates.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

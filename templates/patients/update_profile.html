@@ -1,0 +1,137 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h4 class="fw-bold text-primary">
+                        <i class="bi bi-person-check-fill me-2"></i>Complete Your Medical Profile
+                    </h4>
+                    <p class="text-muted small">These details are required for NHIF/SHIF verification and clinical records.</p>
+                </div>
+                <div class="card-body p-4">
+
+                    <!-- ✅ Profile Completion Progress Bar -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small fw-bold">Profile Completion</span>
+                            <span class="text-primary small fw-bold">{{ percentage }}%</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar {% if percentage < 50 %}bg-danger{% elif percentage < 100 %}bg-warning{% else %}bg-success{% endif %} progress-bar-striped progress-bar-animated"
+                                 role="progressbar"
+                                 style="width: {{ percentage }}%"
+                                 aria-valuenow="{{ percentage }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                        {% if percentage < 100 %}
+                        <p class="text-info small mt-2"><i class="bi bi-info-circle"></i> Please fill all fields to reach 100%.</p>
+                        {% endif %}
+                    </div>
+                    <!-- ✅ End Progress Bar -->
+
+                    <!-- ✅ Unified form with file upload -->
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Profile Picture Upload -->
+                        <div class="text-center mb-4">
+                            {% if profile.profile_picture %}
+                                <img src="{{ profile.profile_picture.url }}" class="rounded-circle shadow" style="width: 120px; height: 120px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-light rounded-circle d-inline-block shadow-sm" style="width: 120px; height: 120px; line-height: 120px;">
+                                    <i class="bi bi-person text-muted" style="font-size: 3rem;"></i>
+                                </div>
+                            {% endif %}
+                            <div class="mt-2">
+                                <label class="form-label fw-bold">Profile Picture</label>
+                                {{ form.profile_picture }}
+                                {% if form.profile_picture.errors %}
+                                    <div class="text-danger small">{{ form.profile_picture.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">National ID / Passport</label>
+                                {{ form.id_number }}
+                                {% if form.id_number.errors %}
+                                    <div class="text-danger small">{{ form.id_number.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">NHIF/SHIF Number</label>
+                                {{ form.nhif_number }}
+                                {% if form.nhif_number.errors %}
+                                    <div class="text-danger small">{{ form.nhif_number.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Phone Number</label>
+                                {{ form.phone_number }}
+                                {% if form.phone_number.errors %}
+                                    <div class="text-danger small">{{ form.phone_number.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Date of Birth</label>
+                                {{ form.date_of_birth }}
+                                {% if form.date_of_birth.errors %}
+                                    <div class="text-danger small">{{ form.date_of_birth.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Gender</label>
+                                {{ form.gender }}
+                                {% if form.gender.errors %}
+                                    <div class="text-danger small">{{ form.gender.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Blood Group</label>
+                                {{ form.blood_group }}
+                                {% if form.blood_group.errors %}
+                                    <div class="text-danger small">{{ form.blood_group.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <hr class="my-4 text-muted">
+                            <h6 class="fw-bold mb-3">Emergency Contact Details</h6>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Contact Name</label>
+                                {{ form.emergency_contact_name }}
+                                {% if form.emergency_contact_name.errors %}
+                                    <div class="text-danger small">{{ form.emergency_contact_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Contact Phone</label>
+                                {{ form.emergency_contact_phone }}
+                                {% if form.emergency_contact_phone.errors %}
+                                    <div class="text-danger small">{{ form.emergency_contact_phone.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold">
+                                Save Profile Details
+                            </button>
+                       <a href="{% url 'dashboard:patient_dashboard' %}" class="btn btn-link text-muted mt-2">Maybe Later</a>
+                        </div>
+                    </form>
+                    <!-- ✅ End unified form -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

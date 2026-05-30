@@ -1,0 +1,27 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-primary shadow-lg text-center">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Authorization Code</h5>
+                </div>
+                <div class="card-body p-5">
+                    <p class="mb-1 text-muted">Provide this code to Dr. {{ appointment.doctor.username }}:</p>
+                    <h1 class="display-3 fw-bold text-primary mb-4" style="letter-spacing: 5px;">{{ code }}</h1>
+
+                    <div class="progress mb-3" style="height: 10px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar" style="width: 100%"></div>
+                    </div>
+                    <p class="small text-danger fw-bold">Expires in 5 minutes</p>
+
+                    <hr>
+                    <a href="{% url 'appointments:appointment_list' %}" class="btn btn-primary">Done</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

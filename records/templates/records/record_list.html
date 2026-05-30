@@ -1,0 +1,457 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+:root { --deep: #0a3d62; --red: #CC0A0A; }
+.rec-page { padding: 1.4rem 1.8rem 3rem; }
+
+/* ── Page header ───────────────────────────────── */
+.page-hdr {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; flex-wrap: wrap;
+    gap: 1rem; margin-bottom: 1.6rem;
+}
+
+/* ── Section label ─────────────────────────────── */
+.section-head {
+    display: flex; align-items: center;
+    justify-content: space-between; flex-wrap: wrap;
+    gap: .8rem; margin-bottom: .8rem;
+}
+.section-title {
+    font-size: .85rem; font-weight: 700; color: var(--deep);
+    display: flex; align-items: center; gap: .5rem;
+}
+.section-count {
+    font-size: .72rem; color: #8492a6; font-weight: 400;
+}
+
+/* ── Table card ────────────────────────────────── */
+.tcard {
+    background: #fff; border-radius: 14px;
+    border: 1px solid #e4e9f0;
+    box-shadow: 0 1px 6px rgba(0,0,0,.04);
+    overflow: hidden; margin-bottom: 2rem;
+}
+.tcard-head {
+    padding: .85rem 1.3rem; border-bottom: 1px solid #e4e9f0;
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fafbfc; flex-wrap: wrap; gap: .5rem;
+}
+.tcard-head-title {
+    font-size: .78rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .8px; color: #8492a6;
+    display: flex; align-items: center; gap: .45rem;
+}
+
+/* ── Table ─────────────────────────────────────── */
+.rec-table { width: 100%; border-collapse: separate; border-spacing: 0 .3rem; }
+.rec-table thead th {
+    font-size: .67rem; text-transform: uppercase; letter-spacing: .8px;
+    color: #8492a6; padding: .35rem 1rem; font-weight: 600; white-space: nowrap;
+}
+.rec-table tbody tr {
+    background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    transition: transform .15s;
+}
+.rec-table tbody tr:hover { transform: translateX(3px); }
+.rec-table tbody td {
+    padding: .7rem 1rem; font-size: .83rem;
+    border-top: 1px solid #e4e9f0; border-bottom: 1px solid #e4e9f0;
+    vertical-align: middle;
+}
+.rec-table tbody td:first-child { border-left: 1px solid #e4e9f0; border-radius: 8px 0 0 8px; }
+.rec-table tbody td:last-child  { border-right: 1px solid #e4e9f0; border-radius: 0 8px 8px 0; }
+
+/* ── Facility cell ─────────────────────────────── */
+.fac-cell { display: flex; align-items: center; gap: .65rem; }
+.fac-icon {
+    width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: .95rem;
+}
+.fac-icon.hospital { background: #e8f4fd; color: var(--deep); }
+.fac-icon.self     { background: #f0ebfc; color: #6f42c1; }
+.fac-name  { font-size: .85rem; font-weight: 600; }
+.fac-date  { font-size: .68rem; color: #aaa; }
+
+/* ── Vitals inline ─────────────────────────────── */
+.vitals-inline { display: flex; flex-wrap: wrap; gap: .3rem; }
+.vchip {
+    font-size: .7rem; padding: 2px 7px; border-radius: 5px;
+    background: #f4f6f9; color: #555; white-space: nowrap;
+}
+.vchip.warn  { background: #fff3cd; color: #856404; }
+.vchip.alert { background: #f8d7da; color: #842029; }
+.vchip.ok    { background: #d1f2e0; color: #0a6b35; }
+
+/* ── AI badge ──────────────────────────────────── */
+.ai-badge {
+    font-size: .6rem; font-weight: 700; padding: 2px 8px;
+    border-radius: 20px; border: 1px solid; text-transform: uppercase;
+    white-space: nowrap;
+}
+.ai-critical { background: #fff0f0; color: #dc3545; border-color: #fcc; }
+.ai-high     { background: #fff4ec; color: #fd7e14; border-color: #fdd; }
+.ai-moderate { background: #fffbea; color: #d4a017; border-color: #f5e0a0; }
+.ai-low      { background: #f0fff8; color: #198754; border-color: #b8f0d4; }
+
+/* ── Empty state ───────────────────────────────── */
+.empty-row td {
+    text-align: center; padding: 2rem; color: #8492a6;
+    font-size: .83rem; font-style: italic;
+    background: #fafbfc !important;
+    border-radius: 8px !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rec-page">
+
+    {# ── Page header ── #}
+    <div class="page-hdr">
+        <div>
+            <h4 class="fw-bold mb-1" style="color:var(--deep);">
+                <i class="bi bi-file-medical me-2"></i>My Medical Records
+            </h4>
+            <p class="text-muted mb-0" style="font-size:.82rem;">
+                Access your clinical history and diagnostic data securely.
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'dashboard:patient_dashboard' %}"
+               class="btn btn-sm btn-outline-secondary rounded-pill">
+                <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+            </a>
+            <a href="{% url 'records:patient_input_vitals' %}"
+               class="btn btn-sm rounded-pill fw-bold"
+               style="background:#6f42c1; color:#fff; border:none;">
+                <i class="bi bi-cpu me-1"></i> Log Vitals + AI Analysis
+            </a>
+        </div>
+    </div>
+
+    {# ════════════════════════════════════════════════════════
+       TABLE 1 — HOSPITAL / CLINIC RECORDS
+       These are records added manually from the dashboard
+       with a real hospital name and doctor.
+    ════════════════════════════════════════════════════════ #}
+    <div class="section-head">
+        <div class="section-title">
+            <i class="bi bi-building-fill-cross" style="color:var(--deep);"></i>
+            Hospital &amp; Clinic Records
+            <span class="section-count">({{ hospital_records|length }})</span>
+        </div>
+        <a href="{% url 'dashboard:patient_dashboard' %}#add-record"
+           class="btn btn-sm rounded-pill fw-bold"
+           style="background:var(--deep); color:#fff; border:none; font-size:.72rem;">
+            <i class="bi bi-plus-circle me-1"></i> Add Record
+        </a>
+    </div>
+
+    <div class="tcard">
+        <div class="tcard-head">
+            <span class="tcard-head-title">
+                <i class="bi bi-hospital"></i> Clinical Visits &amp; Uploaded Documents
+            </span>
+            {% if hospital_records %}
+            <input type="text" placeholder="Search…"
+                   style="font-size:.74rem; padding:.28rem .7rem;
+                          border:1px solid #e4e9f0; border-radius:6px;
+                          outline:none; width:160px;"
+                   oninput="filterTable('hospTable', this.value)">
+            {% endif %}
+        </div>
+        <div style="padding:.4rem .7rem; overflow-x:auto;">
+            <table class="rec-table" id="hospTable">
+                <thead>
+                    <tr>
+                        <th style="padding-left:1.1rem;">Facility / Hospital</th>
+                        <th>Attending Doctor</th>
+                        <th>Notes / Symptoms</th>
+                        <th>Admission</th>
+                        <th>Discharge</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if hospital_records %}
+                    {% for r in hospital_records %}
+                    <tr data-search="{{ r.hospital_name|lower }} {{ r.doctor_name|lower }} {{ r.description|lower }}">
+                        <td>
+                            <div class="fac-cell">
+                                <div class="fac-icon hospital">
+                                    <i class="bi bi-building-fill-cross"></i>
+                                </div>
+                                <div>
+                                    <div class="fac-name">{{ r.hospital_name|title }}</div>
+                                    <div class="fac-date">Added {{ r.uploaded_at|date:"d M Y" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if r.doctor_name and r.doctor_name != '-' and r.doctor_name != 'Patient' %}
+                                {{ r.doctor_name|title }}
+                            {% else %}
+                                <span style="color:#ccc; font-style:italic;">Not specified</span>
+                            {% endif %}
+                        </td>
+                        <td style="max-width:200px;">
+                            {# The description field holds symptoms — show it directly #}
+                            {% if r.description %}
+                                <span title="{{ r.description }}"
+                                      style="display:block; overflow:hidden; text-overflow:ellipsis;
+                                             white-space:nowrap; max-width:200px; font-size:.78rem; color:#555;">
+                                    {{ r.description|cut:"Symptoms: " }}
+                                </span>
+                            {% else %}
+                                <span style="color:#ccc; font-size:.76rem; font-style:italic;">No notes</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size:.78rem; white-space:nowrap;">
+                            {% if r.admission_date %}{{ r.admission_date|date:"d M Y" }}
+                            {% else %}<span style="color:#ccc;">—</span>{% endif %}
+                        </td>
+                        <td style="font-size:.78rem; white-space:nowrap;">
+                            {% if r.discharge_date %}{{ r.discharge_date|date:"d M Y" }}
+                            {% elif r.admission_date %}<span style="color:#d4a017; font-size:.72rem;">Ongoing</span>
+                            {% else %}<span style="color:#ccc;">—</span>{% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                {% if r.document %}
+                                <a href="{{ r.document.url }}" target="_blank"
+                                   class="btn btn-sm btn-outline-primary rounded-2"
+                                   style="font-size:.7rem; padding:.2rem .6rem;">
+                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>Doc
+                                </a>
+                                {% endif %}
+                                <form method="POST" action="{% url 'records:delete_record' r.id %}"
+                                      style="margin:0;"
+                                      onsubmit="return confirm('Delete this record permanently?')">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-danger rounded-2"
+                                            style="font-size:.7rem; padding:.2rem .5rem;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr class="empty-row">
+                        <td colspan="6">
+                            <i class="bi bi-folder2-open d-block mb-1" style="font-size:1.5rem;"></i>
+                            No hospital records yet.
+                            Add one from the dashboard form.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <div class="section-head">
+        <div class="section-title">
+            <i class="bi bi-cpu-fill" style="color:#6f42c1;"></i>
+            My Vitals &amp; AI Health Readings
+            <span class="section-count">({{ vitals_records|length }})</span>
+        </div>
+        <a href="{% url 'records:patient_input_vitals' %}"
+           class="btn btn-sm rounded-pill fw-bold"
+           style="background:#6f42c1; color:#fff; border:none; font-size:.72rem;">
+            <i class="bi bi-plus-circle me-1"></i> Log New Reading
+        </a>
+    </div>
+
+    <div class="tcard" style="border-top:3px solid #6f42c1;">
+        <div class="tcard-head">
+            <span class="tcard-head-title" style="color:#6f42c1;">
+                <i class="bi bi-heart-pulse"></i>
+                Self-Reported Vitals — AI Analysed
+            </span>
+            <span style="font-size:.72rem; color:#8492a6;">
+                These readings are available to your doctor during consultation
+            </span>
+        </div>
+        <div style="padding:.4rem .7rem; overflow-x:auto;">
+            <table class="rec-table" id="vitalsTable">
+                <thead>
+                    <tr>
+                        <th style="padding-left:1.1rem;">Date &amp; Time</th>
+                        <th>Temp</th>
+                        <th>Heart Rate</th>
+                        <th>Oxygen</th>
+                        <th>Blood Pressure</th>
+                        <th>Glucose</th>
+                        <th>AI Score</th>
+                        <th>AI Verdict</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if vitals_records %}
+                    {% for r in vitals_records %}
+                    <tr>
+                        <td style="font-size:.78rem; white-space:nowrap;">
+                            <div class="fw-bold">{{ r.uploaded_at|date:"d M Y" }}</div>
+                            <div style="color:#aaa; font-size:.68rem;">{{ r.uploaded_at|time:"H:i" }}</div>
+                        </td>
+
+                        {# Temperature — no degree symbol, just the number + label #}
+                        <td>
+                            {% if r.temperature %}
+                            <span class="vchip
+                                {% if r.temperature >= 40 %}alert
+                                {% elif r.temperature >= 38 %}warn
+                                {% else %}ok{% endif %}">
+                                {{ r.temperature }} °C
+                                {% if r.temperature >= 40 %} 🔴
+                                {% elif r.temperature >= 38 %} 🟡
+                                {% else %} 🟢{% endif %}
+                            </span>
+                            {% else %}<span style="color:#ccc;">—</span>{% endif %}
+                        </td>
+
+                        {# Heart rate #}
+                        <td>
+                            {% if r.heart_rate %}
+                            <span class="vchip
+                                {% if r.heart_rate > 100 or r.heart_rate < 50 %}warn
+                                {% else %}ok{% endif %}">
+                                {{ r.heart_rate }} bpm
+                            </span>
+                            {% else %}<span style="color:#ccc;">—</span>{% endif %}
+                        </td>
+
+                        {# Oxygen saturation #}
+                        <td>
+                            {% if r.oxygen_saturation %}
+                            <span class="vchip
+                                {% if r.oxygen_saturation < 90 %}alert
+                                {% elif r.oxygen_saturation < 95 %}warn
+                                {% else %}ok{% endif %}">
+                                {{ r.oxygen_saturation }}%
+                            </span>
+                            {% else %}<span style="color:#ccc;">—</span>{% endif %}
+                        </td>
+
+                        {# Blood pressure #}
+                        <td>
+                            {% if r.blood_pressure_sys %}
+                            <span class="vchip
+                                {% if r.blood_pressure_sys >= 160 %}alert
+                                {% elif r.blood_pressure_sys >= 140 %}warn
+                                {% else %}ok{% endif %}">
+                                {{ r.blood_pressure_sys }} mmHg
+                            </span>
+                            {% else %}<span style="color:#ccc;">—</span>{% endif %}
+                        </td>
+
+                        {# Blood glucose #}
+                        <td>
+                            {% if r.blood_glucose %}
+                            <span class="vchip
+                                {% if r.blood_glucose >= 11.1 %}alert
+                                {% elif r.blood_glucose >= 7.8 %}warn
+                                {% else %}ok{% endif %}">
+                                {{ r.blood_glucose }} mmol/L
+                            </span>
+                            {% else %}<span style="color:#ccc;">—</span>{% endif %}
+                        </td>
+
+                        {# AI confidence score #}
+                        <td>
+                            <span class="ai-badge
+                                {% if r.ai_confidence_score >= 80 %}ai-critical
+                                {% elif r.ai_confidence_score >= 60 %}ai-high
+                                {% elif r.ai_confidence_score >= 35 %}ai-moderate
+                                {% else %}ai-low{% endif %}">
+                                {{ r.ai_confidence_score }}%
+                            </span>
+                        </td>
+
+                        {# Plain-language AI verdict #}
+                        <td style="font-size:.76rem; max-width:160px;">
+                            {% if r.ai_confidence_score >= 80 %}
+                                <span style="color:#dc3545; font-weight:600;">
+                                    <i class="bi bi-exclamation-octagon-fill me-1"></i>
+                                    See a doctor urgently
+                                </span>
+                            {% elif r.ai_confidence_score >= 60 %}
+                                <span style="color:#fd7e14; font-weight:600;">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                    Book an appointment
+                                </span>
+                            {% elif r.ai_confidence_score >= 35 %}
+                                <span style="color:#d4a017;">
+                                    <i class="bi bi-eye-fill me-1"></i>
+                                    Monitor closely
+                                </span>
+                            {% else %}
+                                <span style="color:#198754;">
+                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                    All readings normal
+                                </span>
+                            {% endif %}
+                            {% if r.needs_advanced_scan %}
+                            <div style="font-size:.65rem; color:#dc3545; margin-top:.2rem;">
+                                Advanced scan flagged
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <form method="POST" action="{% url 'records:delete_record' r.id %}"
+                                  style="margin:0;"
+                                  onsubmit="return confirm('Delete this reading?')">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-danger rounded-2"
+                                        style="font-size:.7rem; padding:.2rem .5rem;">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr class="empty-row">
+                        <td colspan="9">
+                            <i class="bi bi-heart-pulse d-block mb-1" style="font-size:1.5rem; color:#6f42c1;"></i>
+                            No vitals logged yet.
+                            <a href="{% url 'records:patient_input_vitals' %}"
+                               style="color:#6f42c1; font-weight:600;">Log your first reading →</a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% if vitals_records %}
+        <div style="padding:.8rem 1.3rem; border-top:1px solid #e4e9f0;
+                    background:#faf8ff; font-size:.76rem; color:#8492a6;">
+            <i class="bi bi-info-circle me-1" style="color:#6f42c1;"></i>
+            These readings are visible to any doctor you share your access code with,
+            saving time on basic tests during consultation.
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterTable(tableId, q) {
+    const lq = q.toLowerCase();
+    document.querySelectorAll('#' + tableId + ' tbody tr:not(.empty-row)').forEach(row => {
+        row.style.display = (row.dataset.search || '').includes(lq) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

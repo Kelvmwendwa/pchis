@@ -1,0 +1,47 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Upload Medical Scan | PCHIS{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold mb-4 text-primary">
+                        <i class="bi bi-cloud-arrow-up-fill me-2"></i>Upload Diagnostic Scan
+                    </h3>
+
+                    <div class="alert alert-info border-0 rounded-3 mb-4">
+                        <small><i class="bi bi-info-circle-fill me-2"></i>
+                        Our AI system will automatically analyze your scan for anomalies upon upload.</small>
+                    </div>
+
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Scan Title</label>
+                            <label>
+                                <input type="text" name="title" class="form-control rounded-pill" placeholder="e.g., Chest X-Ray, MRI Brain" required>
+                            </label>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Select File (Image or PDF)</label>
+                            <input type="file" name="document" class="form-control rounded-4" accept="image/*,.pdf" required>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary rounded-pill py-2 fw-bold">
+                                Start AI Analysis
+                            </button>
+                            <a href="{% url 'records:record_list' %}" class="btn btn-light rounded-pill py-2">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

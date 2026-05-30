@@ -1,0 +1,342 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCHIS | Digital Health Platform</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+    :root {
+        --pchis-red:      #CC0A0A;
+        --pchis-red-dark: #a00808;
+        --pchis-purple:   #6B0ACC;
+        --pchis-deep:     #0a3d62;
+        --sidebar-width:  255px;
+        --topbar-h:       54px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f0f4f8; margin: 0; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+        width: var(--sidebar-width); height: 100vh;
+        position: fixed; top: 0; left: 0;
+        background: var(--pchis-red); color: white;
+        z-index: 1000; display: flex; flex-direction: column; transition: transform .3s;
+    }
+    .sidebar-brand { padding: 1.2rem 1.4rem; border-bottom: 1px solid rgba(255,255,255,.15); text-align: center; }
+    .sidebar-brand h4 { margin: 0; font-size: 1.1rem; font-weight: 700; letter-spacing: .5px; }
+    .sidebar-brand small { opacity: .65; font-size: .72rem; }
+    .sidebar-section-label {
+        font-size: .62rem; font-weight: 700; letter-spacing: 1.2px;
+        text-transform: uppercase; color: rgba(255,255,255,.45); padding: 1rem 1.2rem .4rem;
+    }
+    .nav-link {
+        color: rgba(255,255,255,.82); padding: .65rem 1.1rem; transition: .2s;
+        text-decoration: none; display: flex; align-items: center; gap: .55rem;
+        border-radius: 8px; margin: .1rem .6rem; font-size: .84rem;
+    }
+    .nav-link:hover { background: rgba(255,255,255,.12); color: #fff; }
+    .nav-link.active-link { background: rgba(0,0,0,.22); color: #fff; border-left: 3px solid #fff; font-weight: 600; }
+    .nav-badge {
+        margin-left: auto; background: #fff; color: var(--pchis-red);
+        font-size: .6rem; font-weight: 700; padding: 1px 7px; border-radius: 20px;
+    }
+    .patient-topbar {
+        background: var(--pchis-purple); padding: .85rem 1.6rem; color: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,.12); display: flex;
+        justify-content: space-between; align-items: center;
+    }
+    .main-wrapper { margin-left: var(--sidebar-width); min-height: 100vh; }
+    .main-inner { padding: 1.5rem 1.8rem 3rem; }
+    .sidebar-footer { margin-top: auto; padding: .8rem; border-top: 1px solid rgba(255,255,255,.12); }
+
+    /* ── Doctor layout ── */
+    body.doctor-layout .sidebar      { display: none !important; }
+    body.doctor-layout .main-wrapper { margin-left: 0 !important; }
+    body.doctor-layout .main-inner   { padding: 0 !important; }
+    body.doctor-layout .patient-topbar { display: none !important; }
+
+    .doctor-topnav {
+        display: none; position: sticky; top: 0; z-index: 1050;
+        height: var(--topbar-h); background: var(--pchis-deep);
+        align-items: center; padding: 0 1rem; gap: .3rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,.22); overflow-x: auto;
+    }
+    body.doctor-layout .doctor-topnav { display: flex; }
+
+    .topnav-brand {
+        font-family: 'DM Sans', sans-serif; font-size: .88rem; font-weight: 700;
+        color: #fff; letter-spacing: .4px; margin-right: .8rem; white-space: nowrap; flex-shrink: 0;
+    }
+    .topnav-brand span { color: #7ec8e3; }
+
+    .topnav-links {
+        display: flex; align-items: center; gap: .1rem;
+        overflow-x: auto; flex: 1; scrollbar-width: none;
+    }
+    .topnav-links::-webkit-scrollbar { display: none; }
+
+    .tnav-btn {
+        display: flex; align-items: center; gap: .3rem;
+        padding: .35rem .75rem; border-radius: 7px; white-space: nowrap;
+        font-size: .75rem; font-weight: 500; color: rgba(255,255,255,.68);
+        cursor: pointer; border: none; background: none; transition: .15s;
+        text-decoration: none; font-family: 'DM Sans', sans-serif; flex-shrink: 0;
+    }
+    .tnav-btn:hover  { background: rgba(255,255,255,.12); color: #fff; }
+    .tnav-btn.active { background: rgba(255,255,255,.18); color: #fff; font-weight: 600; }
+    .tnav-btn .dot   { width: 6px; height: 6px; border-radius: 50%; background: #ff6b6b; flex-shrink: 0; }
+
+    .topnav-right { display: flex; align-items: center; gap: .6rem; margin-left: auto; flex-shrink: 0; }
+    .topnav-avatar {
+        width: 32px; height: 32px; border-radius: 50%;
+        border: 2px solid rgba(255,255,255,.3);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; color: #fff; background: rgba(255,255,255,.15);
+        overflow: hidden; font-size: .78rem;
+    }
+    .topnav-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ── Section switcher ── */
+    .doc-section { display: none; }
+    .doc-section.active { display: block; }
+
+    @media (max-width: 768px) {
+        .sidebar { transform: translateX(-100%); }
+        .sidebar.open { transform: translateX(0); }
+        .main-wrapper { margin-left: 0; }
+        .topnav-brand { display: none; }
+    }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+{# FIX: use |upper filter so 'Doctor', 'doctor', 'DOCTOR' all work #}
+<body class="{% if request.user.is_authenticated and request.user.role|upper == 'DOCTOR' %}doctor-layout{% endif %}">
+
+{# ── SIDEBAR (patients) ── #}
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <h4>PCHIS <strong>PRO</strong></h4>
+        <small>Digital Health Platform</small>
+    </div>
+    <nav class="flex-grow-1 py-2 overflow-auto">
+        <a href="{% url 'dashboard:role_redirect' %}"
+           class="nav-link {% if request.resolver_match.url_name == 'patient_dashboard' %}active-link{% endif %}">
+            <i class="bi bi-house-door"></i> Dashboard
+        </a>
+
+        {% if request.user.role|upper == 'PATIENT' %}
+        <div class="sidebar-section-label">My Health</div>
+        <a href="{% url 'records:record_list' %}" class="nav-link
+           {% if request.resolver_match.url_name == 'record_list' %}active-link{% endif %}">
+            <i class="bi bi-file-medical"></i> My Records
+        </a>
+        <a href="{% url 'records:patient_input_vitals' %}" class="nav-link
+           {% if request.resolver_match.url_name == 'patient_input_vitals' %}active-link{% endif %}">
+            <i class="bi bi-heart-pulse"></i> Log Vitals
+        </a>
+        <a href="{% url 'appointments:book_appointment' %}" class="nav-link
+           {% if request.resolver_match.url_name == 'book_appointment' %}active-link{% endif %}">
+            <i class="bi bi-calendar-plus"></i> Book Appointment
+        </a>
+        <a href="{% url 'records:view_access_code' %}" class="nav-link
+           {% if request.resolver_match.url_name == 'view_access_code' %}active-link{% endif %}">
+            <i class="bi bi-shield-lock"></i> Share Code
+        </a>
+        <div class="sidebar-section-label">Account</div>
+        <a href="{% url 'patients:update_profile' %}" class="nav-link
+           {% if request.resolver_match.url_name == 'update_profile' %}active-link{% endif %}">
+            <i class="bi bi-person-gear"></i> My Profile
+        </a>
+        <a href="{% url 'messaging:inbox' %}" class="nav-link
+           {% if request.resolver_match.url_name == 'inbox' %}active-link{% endif %}">
+            <i class="bi bi-chat-dots"></i> Messages
+            {% if unread_count %}<span class="nav-badge">{{ unread_count }}</span>{% endif %}
+        </a>
+        {% elif request.user.role|upper == 'ADMIN' %}
+        <div class="sidebar-section-label">Administration</div>
+        <a href="/admin/" class="nav-link"><i class="bi bi-sliders"></i> Admin Panel</a>
+        {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <form action="{% url 'accounts:logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="nav-link border-0 w-100 text-start bg-transparent"
+                    style="color:rgba(255,200,100,.9);">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </button>
+        </form>
+    </div>
+</aside>
+
+{# ── DOCTOR TOP NAV (all 8 sections) ── #}
+{% if request.user.role|upper == 'DOCTOR' %}
+<nav class="doctor-topnav">
+    <div class="topnav-brand">PCHIS <span>Clinical</span></div>
+
+    <div class="topnav-links">
+        {% with is_db=request.resolver_match.url_name|slugify %}
+
+        <a href="{% if 'dashboard' in is_db %}javascript:void(0){% else %}{% url 'dashboard:doctor_dashboard' %}?section=triage{% endif %}"
+           class="tnav-btn active" data-section="triage" onclick="handleNavClick('triage')">
+            <i class="bi bi-activity"></i> Triage
+        </a>
+
+        <a href="{% if 'dashboard' in is_db %}javascript:void(0){% else %}{% url 'dashboard:doctor_dashboard' %}?section=schedule{% endif %}"
+           class="tnav-btn" data-section="schedule" onclick="handleNavClick('schedule')">
+            <i class="bi bi-calendar3"></i> Appointments
+            {% if pending_count %}<div class="dot"></div>{% endif %}
+        </a>
+
+        <a href="{% if 'dashboard' in is_db %}javascript:void(0){% else %}{% url 'dashboard:doctor_dashboard' %}?section=lookup{% endif %}"
+           class="tnav-btn" data-section="lookup" onclick="handleNavClick('lookup')">
+            <i class="bi bi-shield-lock"></i> Quick Lookup
+        </a>
+
+        <a href="{% if 'dashboard' in is_db %}javascript:void(0){% else %}{% url 'dashboard:doctor_dashboard' %}?section=clinical{% endif %}"
+           class="tnav-btn" data-section="clinical" onclick="handleNavClick('clinical')">
+            <i class="bi bi-file-medical"></i> Clinical Records
+        </a>
+
+        <a href="{% if 'dashboard' in is_db %}javascript:void(0){% else %}{% url 'dashboard:doctor_dashboard' %}?section=medical{% endif %}"
+           class="tnav-btn" data-section="medical" onclick="handleNavClick('medical')">
+            <i class="bi bi-heart-pulse"></i> Medical Records
+        </a>
+
+        <a href="{% if 'dashboard' in is_db %}javascript:void(0){% else %}{% url 'dashboard:doctor_dashboard' %}?section=access_codes{% endif %}"
+           class="tnav-btn" data-section="access_codes" onclick="handleNavClick('access_codes')">
+            <i class="bi bi-key"></i> Access Codes
+        </a>
+
+        <a href="{% if 'dashboard' in is_db %}javascript:void(0){% else %}{% url 'dashboard:doctor_dashboard' %}?section=messages{% endif %}"
+           class="tnav-btn" data-section="messages" onclick="handleNavClick('messages')">
+            <i class="bi bi-chat-dots"></i> Messages
+            {% if unread_messages %}<div class="dot"></div>{% endif %}
+        </a>
+
+        {% endwith %}
+    </div>
+
+    <div class="topnav-right">
+        <span style="color:rgba(255,255,255,.6); font-size:.75rem; white-space:nowrap; display:none;" class="d-md-inline">
+            Dr. {{ request.user.last_name|default:request.user.username }}
+        </span>
+        <div class="topnav-avatar">
+            {% if request.user.profile.profile_picture %}
+                <img src="{{ request.user.profile.profile_picture.url }}" alt="avatar">
+            {% else %}
+                {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+            {% endif %}
+        </div>
+        <form action="{% url 'accounts:logout' %}" method="post" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="tnav-btn" style="color:rgba(255,200,100,.8);">
+                <i class="bi bi-box-arrow-right"></i>
+            </button>
+        </form>
+    </div>
+</nav>
+{% endif %}
+
+{# ── MAIN CONTENT ── #}
+<div class="main-wrapper">
+    {% if request.user.role|upper != 'DOCTOR' %}
+    <div class="patient-topbar">
+        <h5 class="mb-0" style="font-size:.95rem; font-weight:600;">
+            {% if request.user.role|upper == 'PATIENT' %}Patient Portal
+            {% elif request.user.role|upper == 'ADMIN' %}Administration
+            {% else %}PCHIS{% endif %}
+        </h5>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge rounded-pill" style="background:rgba(255,255,255,.18); font-size:.68rem;">
+                {{ request.user.role|title }}
+            </span>
+            <div style="width:38px;height:38px;border-radius:50%;border:2px solid rgba(255,255,255,.4);
+                        overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                {% if request.user.profile.profile_picture %}
+                    <img src="{{ request.user.profile.profile_picture.url }}"
+                         style="width:100%;height:100%;object-fit:cover;" alt="profile">
+                {% else %}
+                    <i class="bi bi-person-circle text-white" style="font-size:1.6rem;line-height:1;"></i>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="main-inner">
+        {# Flash messages #}
+        {% if messages %}
+        <div class="{% if request.user.role|upper == 'DOCTOR' %}px-3 pt-3{% endif %}">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show rounded-3"
+                 role="alert" style="font-size:.85rem; border:none;">
+                {{ message }}
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/**
+ * Handles clicks on the doctor top nav.
+ * If on dashboard: switches sections via JS.
+ * If NOT on dashboard: the <a> tag follows href back to dashboard.
+ */
+function handleNavClick(sectionId) {
+    if (typeof showDocSection === 'function') {
+        showDocSection(sectionId);
+    }
+}
+
+/**
+ * Section switcher — called by dashboard template
+ */
+function showDocSection(sectionId) {
+    document.querySelectorAll('.tnav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.section === sectionId);
+    });
+    document.querySelectorAll('.doc-section').forEach(sec => {
+        sec.classList.remove('active');
+        sec.style.display = 'none';
+    });
+    const target = document.getElementById('sec-' + sectionId);
+    if (target) {
+        target.classList.add('active');
+        target.style.display = 'block';
+    }
+}
+
+/**
+ * On page load — check for ?section= URL param
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    const params = new URLSearchParams(window.location.search);
+    const section = params.get('section');
+    if (section) {
+        showDocSection(section);
+    }
+    // Auto-dismiss alerts after 5s
+    setTimeout(() => {
+        document.querySelectorAll('.alert').forEach(a => {
+            try { bootstrap.Alert.getOrCreateInstance(a).close(); } catch(e) {}
+        });
+    }, 5000);
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

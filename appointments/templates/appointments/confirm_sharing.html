@@ -1,0 +1,32 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow border-0">
+                <div class="card-body p-4 text-center">
+                    <h3 class="mb-3">Grant Record Access</h3>
+                    <p class="text-muted">
+                        Do you want to grant <strong>Dr. {{ appointment.doctor.get_full_name|default:appointment.doctor.username }}</strong>
+                        temporary access to your medical history for this session?
+                    </p>
+
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle me-2"></i>
+                        This will generate a 6-digit code valid for <strong>5 minutes</strong>.
+                    </div>
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">Yes, Generate Code</button>
+                            <a href="{% url 'appointments:appointment_list' %}" class="btn btn-outline-secondary">No, Go Back</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

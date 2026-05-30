@@ -1,0 +1,63 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm rounded-4 border-0 p-4">
+                <h3 class="fw-bold mb-4">
+                    <i class="bi bi-pencil-square text-primary me-2"></i>
+                    New Message
+                </h3>
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <!-- Recipient Selection -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Select Recipient</label>
+                        <select name="recipient_id" class="form-select rounded-pill" required>
+                            <option value="" selected disabled>-- Choose a recipient --</option>
+                            {% for person in users %}
+                                <option value="{{ person.id }}">
+                                    {% if person.role == 'DOCTOR' %}Dr. {% endif %}
+                                    {{ person.get_full_name|default:person.username }}
+                                    {% if request.user.role == 'DOCTOR' %}
+                                        [{{ person.priority }}]
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Message Body -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Your Message</label>
+                        <textarea name="body" class="form-control rounded-4" rows="5"
+                                  placeholder="Type your message here..." required></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary rounded-pill py-2 fw-bold">
+                            <i class="bi bi-send-fill me-2"></i>
+                            Send Message
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Priority Legend (Visible to Doctors Only) -->
+                {% if request.user.role == 'DOCTOR' %}
+                <div class="mt-3 small">
+                    <span class="badge bg-danger">Urgent</span>
+                    <span class="badge bg-warning text-dark">Stable</span>
+                    <span class="badge bg-success">Routine</span>
+                    <p class="text-muted mt-1" style="font-size: 0.8rem;">
+                        *Priorities calculated intelligently based on latest vitals.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

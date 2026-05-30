@@ -1,0 +1,307 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+:root { --deep: #0a3d62; --accent: #6f42c1; }
+.code-page {
+    max-width: 560px; margin: 0 auto;
+    padding: 2rem 1rem 3rem;
+}
+
+/* ── Main code card ────────────────────────────── */
+.code-card {
+    background: #fff; border-radius: 20px;
+    border: 1px solid #e4e9f0;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    overflow: hidden; margin-bottom: 1.2rem;
+}
+.code-card-head {
+    background: linear-gradient(135deg, var(--deep) 0%, var(--accent) 100%);
+    padding: 1.8rem 1.5rem; text-align: center; color: #fff;
+}
+.code-card-body { padding: 2rem 1.5rem; }
+
+/* ── The code itself ───────────────────────────── */
+.code-display {
+    font-size: 3.2rem; font-weight: 800; letter-spacing: .6rem;
+    color: var(--deep); text-align: center; font-family: 'Courier New', monospace;
+    background: #f0f4f8; border-radius: 14px;
+    padding: 1.2rem; margin-bottom: 1rem;
+    border: 2px dashed #c8d8e8; position: relative;
+    user-select: all;
+}
+.code-display.expired {
+    color: #ccc; background: #fafafa; border-color: #eee;
+    text-decoration: line-through;
+}
+
+/* ── Copy button ───────────────────────────────── */
+.copy-btn {
+    display: flex; align-items: center; justify-content: center; gap: .5rem;
+    width: 100%; padding: .85rem; border-radius: 12px;
+    background: var(--deep); color: #fff; border: none;
+    font-size: .95rem; font-weight: 700; cursor: pointer;
+    transition: all .2s; margin-bottom: .8rem;
+}
+.copy-btn:hover { opacity: .9; transform: translateY(-1px); }
+.copy-btn.copied { background: #198754; }
+
+/* ── Countdown ─────────────────────────────────── */
+.countdown-wrap {
+    text-align: center; margin-bottom: 1.2rem;
+}
+.countdown-ring {
+    position: relative; width: 80px; height: 80px;
+    margin: 0 auto .5rem;
+}
+.countdown-ring svg { transform: rotate(-90deg); }
+.countdown-ring .track {
+    fill: none; stroke: #e4e9f0; stroke-width: 6;
+}
+.countdown-ring .progress {
+    fill: none; stroke-width: 6; stroke-linecap: round;
+    stroke-dasharray: 220; transition: stroke-dashoffset .5s, stroke .5s;
+}
+.countdown-num {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; font-weight: 700; color: var(--deep);
+}
+.countdown-lbl {
+    font-size: .72rem; text-transform: uppercase;
+    letter-spacing: .8px; color: #8492a6;
+}
+
+/* ── Share options ─────────────────────────────── */
+.share-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: .7rem;
+    margin-top: 1rem;
+}
+.share-btn {
+    display: flex; align-items: center; justify-content: center; gap: .45rem;
+    padding: .65rem; border-radius: 10px; font-size: .8rem; font-weight: 600;
+    text-decoration: none; border: 1.5px solid; transition: all .15s; cursor: pointer;
+}
+.share-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+.share-whatsapp { background: #25d366; color: #fff; border-color: #25d366; }
+.share-sms      { background: #0a3d62; color: #fff; border-color: #0a3d62; }
+.share-email    { background: #fff; color: #555; border-color: #e4e9f0; }
+.share-refresh  { background: #fff; color: var(--accent); border-color: var(--accent); }
+
+/* ── Info box ──────────────────────────────────── */
+.info-box {
+    background: #f8f9fa; border-radius: 12px;
+    padding: 1rem 1.2rem; font-size: .78rem;
+    color: #666; line-height: 1.6;
+    border-left: 3px solid var(--deep);
+    margin-top: 1.2rem;
+}
+.info-box strong { color: var(--deep); }
+
+/* ── Expired overlay ───────────────────────────── */
+.expired-notice {
+    background: #fff0f0; border: 1.5px solid #fcc;
+    border-radius: 10px; padding: .9rem 1rem;
+    text-align: center; color: #842029;
+    font-size: .85rem; font-weight: 600;
+    margin-bottom: 1rem; display: none;
+}
+.expired-notice.show { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="code-page">
+
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <a href="{% url 'dashboard:patient_dashboard' %}"
+           class="btn btn-sm btn-outline-secondary rounded-pill">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+        <span style="font-size:.8rem; color:#8492a6;">Patient Portal → Share Access Code</span>
+    </div>
+
+    <div class="code-card">
+        <div class="code-card-head">
+            <i class="bi bi-shield-lock-fill" style="font-size:2rem; margin-bottom:.5rem; display:block;"></i>
+            <h5 class="fw-bold mb-1">Your Secure Access Code</h5>
+            <p style="font-size:.82rem; opacity:.8; margin:0;">
+                Share this code with your doctor at the start of your consultation.
+                They'll use it to access your medical records.
+            </p>
+        </div>
+
+        <div class="code-card-body">
+
+            {# Expired notice — shown by JS when timer hits 0 #}
+            <div class="expired-notice" id="expiredNotice">
+                <i class="bi bi-clock-history me-1"></i>
+                This code has expired. Generate a new one below.
+            </div>
+
+            {# The code #}
+            {% if access_code %}
+            <div class="code-display" id="codeDisplay">
+                {% for char in access_code %}{{ char }}{% endfor %}
+            </div>
+            {% else %}
+            <div class="code-display expired" id="codeDisplay" style="font-size:1.2rem; letter-spacing:0;">
+                No active code — generate one below
+            </div>
+            {% endif %}
+
+            {# Countdown ring #}
+            <div class="countdown-wrap">
+                <div class="countdown-ring">
+                    <svg width="80" height="80" viewBox="0 0 80 80">
+                        <circle class="track" cx="40" cy="40" r="35"/>
+                        <circle class="progress" id="progressRing" cx="40" cy="40" r="35"
+                                stroke="var(--deep)" stroke-dashoffset="0"/>
+                    </svg>
+                    <div class="countdown-num" id="countdownNum">5:00</div>
+                </div>
+                <div class="countdown-lbl">Code expires in</div>
+            </div>
+
+            {# Copy button #}
+            <button class="copy-btn" id="copyBtn" onclick="copyCode()">
+                <i class="bi bi-clipboard-fill" id="copyIcon"></i>
+                <span id="copyText">Copy Code</span>
+            </button>
+
+            {# Share options #}
+            <div class="share-row">
+                <a class="share-btn share-whatsapp" id="whatsappBtn" href="#" target="_blank">
+                    <i class="bi bi-whatsapp"></i> WhatsApp
+                </a>
+                <a class="share-btn share-sms" id="smsBtn" href="#">
+                    <i class="bi bi-phone"></i> SMS
+                </a>
+                <a class="share-btn share-email" id="emailBtn" href="#">
+                    <i class="bi bi-envelope"></i> Email
+                </a>
+                <form method="POST" action="{% url 'records:generate_access_code' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="share-btn share-refresh w-100">
+                        <i class="bi bi-arrow-clockwise"></i> New Code
+                    </button>
+                </form>
+            </div>
+
+            <div class="info-box">
+                <strong><i class="bi bi-shield-check me-1"></i>How it works</strong><br>
+                1. Copy or share this 6-digit code with your doctor.<br>
+                2. The doctor enters it in their dashboard under <em>Quick Lookup</em>.<br>
+                3. They get secure access to your records for this consultation only.<br>
+                4. The code works <strong>once</strong> and expires after <strong>5 minutes</strong>.
+                After use, your records are locked again automatically.
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CODE     = "{{ access_code }}";
+const DURATION = 5 * 60; // 5 minutes in seconds
+const CIRC     = 2 * Math.PI * 35; // circumference of r=35 circle
+
+const expiryTime = new Date("{{ expires_at }}").getTime();
+let secondsLeft = Math.floor((expiryTime - new Date().getTime()) / 1000);
+
+// ── Build share links ────────────────────────────────
+const msg = `Your PCHIS secure access code is: ${CODE}\nValid for 5 minutes. Give this to your doctor at the start of your consultation.`;
+
+document.getElementById('whatsappBtn').href =
+    `https://wa.me/?text=${encodeURIComponent(msg)}`;
+
+document.getElementById('smsBtn').href =
+    `sms:?body=${encodeURIComponent(msg)}`;
+
+document.getElementById('emailBtn').href =
+    `mailto:?subject=PCHIS Access Code&body=${encodeURIComponent(msg)}`;
+
+// ── Copy to clipboard ────────────────────────────────
+function copyCode() {
+    if (secondsLeft <= 0) return;
+    navigator.clipboard.writeText(CODE).then(() => {
+        const btn  = document.getElementById('copyBtn');
+        const icon = document.getElementById('copyIcon');
+        const text = document.getElementById('copyText');
+
+        btn.classList.add('copied');
+        icon.className = 'bi bi-check-circle-fill';
+        text.textContent = 'Copied!';
+
+        setTimeout(() => {
+            btn.classList.remove('copied');
+            icon.className = 'bi bi-clipboard-fill';
+            text.textContent = 'Copy Code';
+        }, 2500);
+    }).catch(() => {
+        // Fallback for older browsers
+        const el = document.createElement('textarea');
+        el.value = CODE;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        document.getElementById('copyText').textContent = 'Copied!';
+        setTimeout(() => {
+            document.getElementById('copyText').textContent = 'Copy Code';
+        }, 2500);
+    });
+}
+
+// ── Countdown timer ──────────────────────────────────
+function updateTimer() {
+    const ring = document.getElementById('progressRing');
+    const num  = document.getElementById('countdownNum');
+
+    if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        num.textContent = '0:00';
+        ring.style.stroke = '#dc3545';
+        ring.style.strokeDashoffset = CIRC;
+
+        document.getElementById('codeDisplay').classList.add('expired');
+        document.getElementById('expiredNotice').classList.add('show');
+        document.getElementById('copyBtn').disabled = true;
+        document.getElementById('copyBtn').style.opacity = '.4';
+        document.getElementById('whatsappBtn').style.opacity = '.4';
+        document.getElementById('whatsappBtn').style.pointerEvents = 'none';
+        document.getElementById('smsBtn').style.opacity = '.4';
+        document.getElementById('smsBtn').style.pointerEvents = 'none';
+        document.getElementById('emailBtn').style.opacity = '.4';
+        document.getElementById('emailBtn').style.pointerEvents = 'none';
+        return;
+    }
+
+    // Update countdown number
+    const mins = Math.floor(secondsLeft / 60);
+    const secs = secondsLeft % 60;
+    num.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    // Update ring colour — green → amber → red
+    const pct = secondsLeft / DURATION;
+    if (pct > 0.5)       ring.style.stroke = 'var(--deep)';
+    else if (pct > 0.25) ring.style.stroke = '#d4a017';
+    else                 ring.style.stroke = '#dc3545';
+
+    // Update ring progress
+    const offset = CIRC * (1 - pct);
+    ring.style.strokeDashoffset = offset;
+
+    secondsLeft--;
+}
+
+// Set initial circumference
+document.getElementById('progressRing').style.strokeDasharray = CIRC;
+document.getElementById('progressRing').style.strokeDashoffset = 0;
+
+updateTimer();
+timerInterval = setInterval(updateTimer, 1000);
+</script>
+{% endblock %}

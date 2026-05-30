@@ -1,0 +1,14 @@
+<!-- Reusable Back Button Snippet -->
+<div class="back-nav-container" style="margin-bottom: 1.5rem;">
+    <a href="{% url 'dashboard:doctor_dashboard' %}"
+       style="display: inline-flex; align-items: center; gap: 0.6rem;
+              padding: 0.6rem 1.4rem; border: 1.5px solid #0a3d62;
+              border-radius: 50px; color: #0a3d62; text-decoration: none;
+              font-size: 0.85rem; font-weight: 600; transition: 0.2s ease-in-out;
+              background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"
+       onmouseover="this.style.background='#f0f4f8'; this.style.transform='translateX(-3px)';"
+       onmouseout="this.style.background='#fff'; this.style.transform='translateX(0)';"
+    >
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>

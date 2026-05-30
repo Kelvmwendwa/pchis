@@ -1,0 +1,385 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+:root { --deep: #0a3d62; }
+.vitals-page { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+
+/* ── Form card ─────────────────────────────────── */
+.vitals-card {
+    background: #fff; border-radius: 16px;
+    border: 1px solid #e4e9f0;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    overflow: hidden; margin-bottom: 1.4rem;
+}
+.vitals-card-head {
+    background: linear-gradient(135deg, var(--deep), #1a6a9c);
+    padding: 1.2rem 1.5rem; color: #fff;
+}
+.vitals-card-body { padding: 1.5rem; }
+
+.vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+.field-wrap { display: flex; flex-direction: column; gap: .3rem; }
+.field-label {
+    font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .7px; color: #8492a6;
+    display: flex; align-items: center; gap: .4rem;
+}
+.field-input {
+    border: 1.5px solid #e4e9f0; border-radius: 9px;
+    padding: .55rem .9rem; font-size: .9rem; width: 100%;
+    transition: border-color .2s; font-family: inherit;
+}
+.field-input:focus { border-color: var(--deep); outline: none; box-shadow: 0 0 0 3px rgba(10,61,98,.1); }
+.field-hint { font-size: .68rem; color: #aaa; }
+
+/* ── AI results ────────────────────────────────── */
+.ai-results { margin-top: 1.4rem; }
+
+.result-header {
+    border-radius: 14px; padding: 1.2rem 1.5rem;
+    margin-bottom: 1rem; display: flex;
+    align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+.result-header.critical { background: #fff0f0; border: 1.5px solid #fcc; }
+.result-header.warning  { background: #fff8f0; border: 1.5px solid #fde0b8; }
+.result-header.info     { background: #f0f8ff; border: 1.5px solid #b8d4f8; }
+.result-header.normal   { background: #f0fff8; border: 1.5px solid #b8f0d4; }
+
+.result-icon { font-size: 2rem; flex-shrink: 0; }
+.result-summary { font-size: .95rem; font-weight: 600; flex: 1; }
+.result-summary.critical { color: #842029; }
+.result-summary.warning  { color: #7d4a00; }
+.result-summary.info     { color: #0a3d62; }
+.result-summary.normal   { color: #0a5c35; }
+
+.score-display {
+    text-align: center; flex-shrink: 0;
+    background: rgba(255,255,255,.7); border-radius: 10px;
+    padding: .5rem .9rem;
+}
+.score-num { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+.score-lbl { font-size: .65rem; text-transform: uppercase; letter-spacing: .6px; color: #888; }
+
+/* ── Condition flag cards ───────────────────────── */
+.flags-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: .9rem;
+}
+.flag-card {
+    border-radius: 12px; padding: 1rem 1.1rem;
+    border: 1.5px solid;
+}
+.flag-card.critical { background: #fff0f0; border-color: #fcc; }
+.flag-card.warning  { background: #fff8f0; border-color: #fde0b8; }
+.flag-card.info     { background: #f0f8ff; border-color: #c8ddf8; }
+.flag-card.normal   { background: #f0fff8; border-color: #b8f0d4; }
+
+.flag-condition {
+    font-size: .8rem; font-weight: 700; margin-bottom: .3rem;
+    display: flex; align-items: center; gap: .4rem;
+}
+.flag-condition.critical { color: #842029; }
+.flag-condition.warning  { color: #7d4a00; }
+.flag-condition.info     { color: #0a3d62; }
+
+.flag-message { font-size: .8rem; color: #444; margin-bottom: .5rem; }
+.flag-advice {
+    font-size: .78rem; font-weight: 600;
+    padding: .4rem .7rem; border-radius: 6px;
+    background: rgba(255,255,255,.7);
+}
+.flag-advice.critical { color: #842029; }
+.flag-advice.warning  { color: #7d4a00; }
+.flag-advice.info     { color: #0a3d62; }
+
+/* ── Normal result ─────────────────────────────── */
+.all-normal {
+    text-align: center; padding: 2rem;
+    background: #f0fff8; border-radius: 14px;
+    border: 1.5px solid #b8f0d4;
+}
+
+/* ── Vitals reference table ────────────────────── */
+.ref-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.ref-table th {
+    background: var(--deep); color: #fff;
+    padding: .5rem .8rem; font-weight: 600; font-size: .72rem;
+    text-transform: uppercase; letter-spacing: .5px;
+}
+.ref-table td { padding: .5rem .8rem; border-bottom: 1px solid #e4e9f0; }
+.ref-table tr:last-child td { border-bottom: none; }
+.ref-table tr:hover td { background: #f8fafc; }
+.ref-normal  { color: #198754; font-weight: 600; }
+.ref-warning { color: #d4a017; font-weight: 600; }
+.ref-danger  { color: #dc3545; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="vitals-page">
+
+    {# Page header #}
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <a href="{% url 'dashboard:patient_dashboard' %}"
+           class="btn btn-sm rounded-pill"
+           style="background:var(--deep); color:#fff; border:none; font-size:.8rem;">
+            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </a>
+        <div>
+            <h4 class="fw-bold mb-0" style="color:var(--deep);">Log My Vitals</h4>
+            <p class="text-muted mb-0" style="font-size:.8rem;">
+                Enter your current readings — our AI will analyse them instantly
+            </p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+
+            {# ── Success message ── #}
+            {% if just_saved %}
+            <div class="alert alert-success rounded-3 d-flex align-items-center gap-2 mb-3"
+                 style="font-size:.85rem; border:none;">
+                <i class="bi bi-check-circle-fill"></i>
+                Vitals saved. AI analysis is shown below.
+            </div>
+            {% endif %}
+
+            {# ── Input form ── #}
+            <div class="vitals-card">
+                <div class="vitals-card-head">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-heart-pulse" style="font-size:1.6rem;"></i>
+                        <div>
+                            <div class="fw-bold" style="font-size:1rem;">Record Your Vitals</div>
+                            <div style="font-size:.78rem; opacity:.75;">
+                                Results are analysed by our AI clinical engine immediately
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="vitals-card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="vitals-grid">
+                            <div class="field-wrap">
+                                <label class="field-label">
+                                    <i class="bi bi-thermometer-half"></i> Temperature
+                                </label>
+                                {{ form.temperature }}
+                                <span class="field-hint">Normal: 36.1 – 37.2 °C</span>
+                            </div>
+                            <div class="field-wrap">
+                                <label class="field-label">
+                                    <i class="bi bi-heart-pulse"></i> Heart Rate
+                                </label>
+                                {{ form.heart_rate }}
+                                <span class="field-hint">Normal: 60 – 100 bpm</span>
+                            </div>
+                            <div class="field-wrap">
+                                <label class="field-label">
+                                    <i class="bi bi-lungs"></i> Oxygen Saturation
+                                </label>
+                                {{ form.oxygen_saturation }}
+                                <span class="field-hint">Normal: 95 – 100 %</span>
+                            </div>
+                            <div class="field-wrap">
+                                <label class="field-label">
+                                    <i class="bi bi-droplet-half"></i> Blood Glucose
+                                </label>
+                                {{ form.blood_glucose }}
+                                <span class="field-hint">Normal: 3.9 – 7.8 mmol/L</span>
+                            </div>
+                            <div class="field-wrap">
+                                <label class="field-label">
+                                    <i class="bi bi-activity"></i> Blood Pressure (Systolic)
+                                </label>
+                                {{ form.blood_pressure_sys }}
+                                <span class="field-hint">Normal: 90 – 120 mmHg</span>
+                            </div>
+                        </div>
+
+                        {# Apply form-ctrl class to all inputs #}
+                        <script>
+                        document.querySelectorAll('.vitals-card input, .vitals-card select')
+                            .forEach(el => el.classList.add('field-input'));
+                        </script>
+
+                        <button type="submit"
+                                class="btn w-100 rounded-pill fw-bold mt-4 py-2"
+                                style="background:var(--deep); color:#fff; border:none; font-size:.9rem;">
+                            <i class="bi bi-cpu me-2"></i>
+                            Save & Analyse with AI
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {# ── AI ANALYSIS RESULTS ── #}
+            {% if analysis %}
+            <div class="ai-results">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-cpu-fill" style="color:var(--deep); font-size:1.1rem;"></i>
+                    <span class="fw-bold" style="font-size:.9rem; color:var(--deep);">
+                        AI Clinical Analysis
+                    </span>
+                    <span style="font-size:.72rem; color:#8492a6; margin-left:.3rem;">
+                        Powered by PCHIS Decision Tree Classifier
+                    </span>
+                </div>
+
+                {# Overall result header #}
+                <div class="result-header {{ analysis.overall_severity }}">
+                    <div class="result-icon">
+                        {% if analysis.overall_severity == 'critical' %}🚨
+                        {% elif analysis.overall_severity == 'warning' %}⚠️
+                        {% elif analysis.overall_severity == 'info' %}ℹ️
+                        {% else %}✅{% endif %}
+                    </div>
+                    <div class="result-summary {{ analysis.overall_severity }}">
+                        {{ analysis.summary }}
+                    </div>
+                    <div class="score-display">
+                        <div class="score-num"
+                             style="color:
+                             {% if analysis.confidence_score >= 80 %}#dc3545
+                             {% elif analysis.confidence_score >= 50 %}#fd7e14
+                             {% elif analysis.confidence_score >= 20 %}#d4a017
+                             {% else %}#198754{% endif %};">
+                            {{ analysis.confidence_score }}%
+                        </div>
+                        <div class="score-lbl">Risk Score</div>
+                    </div>
+                </div>
+
+                {# Individual condition flags #}
+                {% if analysis.flags %}
+                <div class="flags-grid">
+                    {% for flag in analysis.flags %}
+                    <div class="flag-card {{ flag.severity }}">
+                        <div class="flag-condition {{ flag.severity }}">
+                            <i class="bi {{ flag.icon }}"></i>
+                            {{ flag.condition }}
+                        </div>
+                        <div class="flag-message">{{ flag.message }}</div>
+                        <div class="flag-advice {{ flag.severity }}">
+                            <i class="bi bi-arrow-right-circle me-1"></i>
+                            {{ flag.advice }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="all-normal">
+                    <i class="bi bi-shield-check" style="font-size:2.5rem; color:#198754; display:block; margin-bottom:.6rem;"></i>
+                    <div class="fw-bold" style="color:#0a5c35; font-size:1rem;">All vitals within normal range</div>
+                    <div style="color:#8492a6; font-size:.82rem; margin-top:.3rem;">
+                        Continue healthy habits — log again in 24–48 hours.
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if analysis.needs_scan %}
+                <div class="alert mt-3 rounded-3 d-flex gap-2 align-items-start"
+                     style="background:#fff0f0; border:1.5px solid #fcc; font-size:.83rem;">
+                    <i class="bi bi-exclamation-octagon-fill text-danger mt-1"></i>
+                    <div>
+                        <strong>Advanced assessment recommended.</strong>
+                        Your AI risk score is {{ analysis.confidence_score }}% — above the 80% clinical threshold.
+                        Your doctor has been flagged. Please book an appointment as soon as possible.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </div>
+
+        {# ── RIGHT: Reference table ── #}
+        <div class="col-lg-5">
+            <div class="vitals-card">
+                <div class="vitals-card-head" style="padding:1rem 1.4rem;">
+                    <div class="fw-bold"><i class="bi bi-table me-2"></i>Normal Ranges Reference</div>
+                    <div style="font-size:.75rem; opacity:.75;">Based on WHO & Kenya MoH guidelines</div>
+                </div>
+                <div style="padding:.5rem;">
+                    <table class="ref-table">
+                        <thead>
+                            <tr>
+                                <th>Vital Sign</th>
+                                <th>Normal</th>
+                                <th>Warning</th>
+                                <th>Critical</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><i class="bi bi-thermometer-half me-1"></i><strong>Temperature</strong></td>
+                                <td class="ref-normal">36.1–37.2°C</td>
+                                <td class="ref-warning">37.3–39.9°C</td>
+                                <td class="ref-danger">≥40°C or &lt;35°C</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-heart-pulse me-1"></i><strong>Heart Rate</strong></td>
+                                <td class="ref-normal">60–100 bpm</td>
+                                <td class="ref-warning">50–59 or 101–129</td>
+                                <td class="ref-danger">&lt;40 or ≥130 bpm</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-lungs me-1"></i><strong>Oxygen (SpO₂)</strong></td>
+                                <td class="ref-normal">96–100%</td>
+                                <td class="ref-warning">91–95%</td>
+                                <td class="ref-danger">≤90%</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-droplet-half me-1"></i><strong>Blood Glucose</strong></td>
+                                <td class="ref-normal">3.9–7.8 mmol/L</td>
+                                <td class="ref-warning">7.9–11.0</td>
+                                <td class="ref-danger">≥11.1 or &lt;2.8</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-activity me-1"></i><strong>Blood Pressure</strong></td>
+                                <td class="ref-normal">90–129 mmHg</td>
+                                <td class="ref-warning">130–159 mmHg</td>
+                                <td class="ref-danger">≥160 or &lt;70</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {# ML explanation card — for your supervisor #}
+            <div class="vitals-card mt-3">
+                <div style="padding:1rem 1.4rem; border-bottom:1px solid #e4e9f0;">
+                    <div class="fw-bold" style="font-size:.8rem; color:var(--deep);">
+                        <i class="bi bi-cpu me-1"></i> How the AI Works
+                    </div>
+                </div>
+                <div style="padding:1rem 1.4rem; font-size:.78rem; color:#555; line-height:1.6;">
+                    <p class="mb-2">
+                        PCHIS uses a <strong>multi-label decision tree classifier</strong>
+                        that evaluates each vital sign independently against
+                        WHO-validated clinical thresholds.
+                    </p>
+                    <p class="mb-2">
+                        Each node in the tree maps a vital to a condition flag
+                        (e.g. Fever, Tachycardia, Hypoxia). Severity weights
+                        are summed into a composite <strong>AI Risk Score (0–100%)</strong>.
+                    </p>
+                    <p class="mb-0">
+                        When the score exceeds <strong>80%</strong>, the system
+                        flags the patient for advanced assessment — matching
+                        the clinical confidence threshold in evidence-based triage.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

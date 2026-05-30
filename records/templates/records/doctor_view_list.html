@@ -1,0 +1,448 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+:root {
+    --deep: #0a3d62;
+    --c-critical: #dc3545;
+    --c-low: #198754;
+}
+
+.record-page { padding: 1.4rem 1.6rem 3rem; font-family: 'DM Sans', 'Inter', sans-serif; }
+
+/* ── Back bar ─────────────────────────────────────── */
+.back-bar {
+    display: flex; align-items: center; gap: 1rem;
+    margin-bottom: 1.4rem; flex-wrap: wrap;
+}
+.back-btn {
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .45rem 1.1rem; border-radius: 8px;
+    background: var(--deep); color: #fff;
+    font-size: .82rem; font-weight: 600;
+    border: none; cursor: pointer; text-decoration: none;
+    transition: opacity .15s;
+}
+.back-btn:hover { opacity: .85; color: #fff; }
+.back-btn i { font-size: 1rem; }
+
+.breadcrumb-trail {
+    font-size: .78rem; color: #8492a6;
+    display: flex; align-items: center; gap: .4rem;
+}
+.breadcrumb-trail a { color: var(--deep); text-decoration: none; font-weight: 500; }
+.breadcrumb-trail a:hover { text-decoration: underline; }
+
+/* ── Patient header card ─────────────────────────── */
+.patient-header {
+    background: linear-gradient(135deg, var(--deep) 0%, #1a6a9c 100%);
+    border-radius: 16px; padding: 1.5rem 2rem;
+    color: #fff; margin-bottom: 1.4rem;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+}
+.patient-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(255,255,255,.2); border: 2px solid rgba(255,255,255,.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 700; flex-shrink: 0;
+    overflow: hidden;
+}
+.patient-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.patient-meta { font-size: .8rem; opacity: .8; margin-top: .2rem; }
+.unlock-badge {
+    display: inline-flex; align-items: center; gap: .4rem;
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
+    border-radius: 20px; padding: .3rem .9rem; font-size: .75rem;
+}
+
+/* ── Shared card ─────────────────────────────────── */
+.pcard {
+    background: #fff; border-radius: 14px;
+    border: 1px solid #e4e9f0;
+    box-shadow: 0 1px 6px rgba(0,0,0,.04);
+    overflow: hidden; margin-bottom: 1.2rem;
+}
+.pcard-head {
+    padding: .85rem 1.2rem; border-bottom: 1px solid #e4e9f0;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.pcard-head-title {
+    font-size: .78rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .8px; color: #8492a6;
+}
+
+/* ── Vitals grid ─────────────────────────────────── */
+.vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0;
+}
+.vital-box {
+    text-align: center; padding: 1rem .5rem;
+    border-right: 1px solid #e4e9f0;
+}
+.vital-box:last-child { border-right: none; }
+.vital-val { font-size: 1.5rem; font-weight: 700; color: var(--deep); line-height: 1; }
+.vital-val.warn  { color: #d4a017; }
+.vital-val.alert { color: var(--c-critical); }
+.vital-unit { font-size: .72rem; color: #8492a6; }
+.vital-lbl  { font-size: .68rem; text-transform: uppercase; letter-spacing: .6px; color: #aaa; margin-top: .2rem; }
+
+/* ── Timeline ────────────────────────────────────── */
+.timeline-wrap {
+    position: relative; padding-left: 1.8rem;
+    border-left: 2px solid #e4e9f0;
+    margin: 1rem 1.2rem;
+}
+.timeline-item { position: relative; margin-bottom: 1.6rem; }
+.timeline-dot {
+    position: absolute; left: -2.35rem; top: .3rem;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--deep); border: 3px solid #fff;
+    box-shadow: 0 0 0 2px var(--deep);
+}
+.timeline-card {
+    background: #fff; border-radius: 12px;
+    border: 1px solid #e4e9f0;
+    box-shadow: 0 1px 5px rgba(0,0,0,.04);
+    overflow: hidden;
+}
+.timeline-card-head {
+    background: #f8fafc; padding: .7rem 1rem;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #e4e9f0; font-size: .82rem;
+}
+.timeline-card-body { padding: .9rem 1rem; }
+.detail-row { display: flex; gap: .5rem; margin-bottom: .5rem; font-size: .83rem; }
+.detail-lbl { color: #8492a6; min-width: 90px; flex-shrink: 0; font-size: .78rem; }
+.rx-box {
+    background: #f0f4ff; border-left: 3px solid var(--deep);
+    border-radius: 6px; padding: .5rem .8rem;
+    font-size: .8rem; font-family: monospace; color: var(--deep);
+    margin-top: .5rem;
+}
+
+/* ── Medical records table ───────────────────────── */
+.doc-table { width: 100%; border-collapse: separate; border-spacing: 0 .3rem; }
+.doc-table thead th {
+    font-size: .67rem; text-transform: uppercase; letter-spacing: .8px;
+    color: #8492a6; padding: .4rem .9rem; font-weight: 600;
+}
+.doc-table tbody tr {
+    background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+.doc-table tbody td {
+    padding: .65rem .9rem; font-size: .82rem;
+    border-top: 1px solid #e4e9f0; border-bottom: 1px solid #e4e9f0;
+}
+.doc-table tbody td:first-child { border-left: 1px solid #e4e9f0; border-radius: 8px 0 0 8px; }
+.doc-table tbody td:last-child  { border-right: 1px solid #e4e9f0; border-radius: 0 8px 8px 0; }
+
+.risk-badge {
+    font-size: .6rem; font-weight: 700; padding: 2px 9px;
+    border-radius: 20px; border: 1px solid; text-transform: uppercase;
+}
+.rb-critical { background:#fff0f0; color:#dc3545; border-color:#fcc; }
+.rb-high     { background:#fff4ec; color:#fd7e14; border-color:#fdd; }
+.rb-moderate { background:#fffbea; color:#d4a017; border-color:#f5e0a0; }
+.rb-low      { background:#f0fff8; color:#198754; border-color:#b8f0d4; }
+
+.empty-state { text-align: center; padding: 2.5rem; color: #8492a6; }
+.empty-state i { font-size: 2rem; display: block; margin-bottom: .6rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% include "includes/_back_to_dashboard.html" %}
+<div class="record-page">
+
+    {# ── Back navigation bar ── #}
+    <div class="back-bar">
+        <button class="back-btn" onclick="history.back()">
+            <i class="bi bi-arrow-left"></i> Back
+        </button>
+        <a href="{% url 'dashboard:doctor_dashboard' %}" class="back-btn"
+           style="background: rgba(10,61,98,.15); color: var(--deep);">
+            <i class="bi bi-house-door"></i> Dashboard
+        </a>
+        <div class="breadcrumb-trail">
+            <a href="{% url 'dashboard:doctor_dashboard' %}">Dashboard</a>
+            <i class="bi bi-chevron-right" style="font-size:.7rem;"></i>
+            <span>Patient Records</span>
+            <i class="bi bi-chevron-right" style="font-size:.7rem;"></i>
+            <span>{{ patient.get_full_name|default:patient.username }}</span>
+        </div>
+    </div>
+
+    {# ── Patient header ── #}
+    <div class="patient-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="patient-avatar">
+                {% if patient.profile.profile_picture %}
+                    <img src="{{ patient.profile.profile_picture.url }}" alt="avatar">
+                {% else %}
+                    {{ patient.first_name|first|upper }}{{ patient.last_name|first|upper }}
+                {% endif %}
+            </div>
+            <div>
+                <h4 class="fw-bold mb-0" style="font-size:1.2rem;">
+                    {{ patient.get_full_name|default:patient.username }}
+                </h4>
+                <div class="patient-meta">
+                    PCHIS-{{ patient.id|add:"1000" }}
+                    {% if patient.profile.id_number %}
+                     · ID: {{ patient.profile.id_number }}
+                    {% endif %}
+                    {% if patient.profile.date_of_birth %}
+                     · DOB: {{ patient.profile.date_of_birth|date:"d M Y" }}
+                    {% endif %}
+                    {% if patient.profile.blood_group %}
+                     · Blood: {{ patient.profile.blood_group }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            <div class="unlock-badge">
+                <i class="bi bi-shield-check"></i>
+                Records unlocked via secure code
+            </div>
+            <a href="{% url 'records:add_clinical_record' patient.id %}"
+               class="btn rounded-pill fw-bold"
+               style="background:#fff; color:var(--deep); border:none; font-size:.8rem; padding:.4rem 1.1rem;">
+                <i class="bi bi-plus-circle me-1"></i> New Clinical Entry
+            </a>
+        </div>
+    </div>
+
+    {# ── Latest vitals snapshot ── #}
+    {% if records %}
+    {% with latest=records.0 %}
+    <div class="pcard mb-3">
+        <div class="pcard-head">
+            <span class="pcard-head-title">
+                <i class="bi bi-heart-pulse me-2"></i>Latest Vitals
+            </span>
+            <span style="font-size:.72rem; color:#8492a6;">{{ latest.uploaded_at|date:"d M Y, H:i" }}</span>
+        </div>
+        <div class="vitals-grid">
+            <div class="vital-box">
+                <div class="vital-val {% if latest.temperature > 38 %}alert{% endif %}">
+                    {{ latest.temperature }}
+                </div>
+                <div class="vital-unit">°C</div>
+                <div class="vital-lbl">Temp</div>
+            </div>
+            <div class="vital-box">
+                <div class="vital-val {% if latest.heart_rate > 100 or latest.heart_rate < 50 %}warn{% endif %}">
+                    {{ latest.heart_rate }}
+                </div>
+                <div class="vital-unit">bpm</div>
+                <div class="vital-lbl">Heart rate</div>
+            </div>
+            <div class="vital-box">
+                <div class="vital-val {% if latest.oxygen_saturation < 95 %}alert{% endif %}">
+                    {{ latest.oxygen_saturation }}
+                </div>
+                <div class="vital-unit">%</div>
+                <div class="vital-lbl">SpO₂</div>
+            </div>
+            <div class="vital-box">
+                <div class="vital-val {% if latest.blood_glucose > 7 %}warn{% endif %}">
+                    {{ latest.blood_glucose }}
+                </div>
+                <div class="vital-unit">mmol/L</div>
+                <div class="vital-lbl">Glucose</div>
+            </div>
+            <div class="vital-box">
+                <div class="vital-val">{{ latest.blood_pressure_sys }}</div>
+                <div class="vital-unit">mmHg</div>
+                <div class="vital-lbl">BP sys</div>
+            </div>
+            <div class="vital-box">
+                <div class="vital-val {% if latest.ai_confidence_score >= 80 %}alert{% elif latest.ai_confidence_score >= 50 %}warn{% else %}{% endif %}">
+                    {{ latest.ai_confidence_score }}%
+                </div>
+                <div class="vital-unit">score</div>
+                <div class="vital-lbl">AI risk</div>
+            </div>
+        </div>
+    </div>
+    {% endwith %}
+    {% endif %}
+
+    <div class="row g-3">
+        {# ── LEFT: Clinical history timeline ── #}
+        <div class="col-lg-7">
+            <div class="pcard">
+                <div class="pcard-head">
+                    <span class="pcard-head-title">
+                        <i class="bi bi-clock-history me-2"></i>Clinical History Timeline
+                    </span>
+                    <a href="{% url 'records:add_clinical_record' patient.id %}"
+                       class="btn btn-sm rounded-pill fw-bold"
+                       style="background:var(--deep); color:#fff; border:none; font-size:.72rem;">
+                        <i class="bi bi-plus-circle me-1"></i> Add Entry
+                    </a>
+                </div>
+                <div style="padding: .5rem 0;">
+                    {% if clinical_history %}
+                    <div class="timeline-wrap">
+                        {% for entry in clinical_history %}
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-card">
+                                <div class="timeline-card-head">
+                                    <div>
+                                        <span class="fw-bold" style="color:var(--deep); font-size:.85rem;">
+                                            {{ entry.hospital_name }}
+                                        </span>
+                                        <span style="color:#8492a6; font-size:.75rem; margin-left:.5rem;">
+                                            · Dr. {{ entry.doctor_name }}
+                                        </span>
+                                    </div>
+                                    <span style="font-size:.72rem; color:#8492a6;">
+                                        {{ entry.date_diagnosed|date:"d M Y" }}
+                                    </span>
+                                </div>
+                                <div class="timeline-card-body">
+                                    {% if entry.symptoms %}
+                                    <div class="detail-row">
+                                        <span class="detail-lbl">Symptoms</span>
+                                        <span>{{ entry.symptoms }}</span>
+                                    </div>
+                                    {% endif %}
+                                    <div class="detail-row">
+                                        <span class="detail-lbl">Diagnosis</span>
+                                        <span class="fw-bold">{{ entry.diagnosis }}</span>
+                                    </div>
+                                    {% if entry.prescription %}
+                                    <div class="rx-box">
+                                        <i class="bi bi-capsule me-1"></i>
+                                        {{ entry.prescription }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-clock-history"></i>
+                        No clinical history for this patient yet.
+                        <br>
+                        <a href="{% url 'records:add_clinical_record' patient.id %}"
+                           class="btn btn-sm btn-primary rounded-pill mt-2"
+                           style="background:var(--deep); border:none;">
+                            Add first clinical entry
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# ── RIGHT: Medical records / vitals history ── #}
+        <div class="col-lg-5">
+            <div class="pcard">
+                <div class="pcard-head">
+                    <span class="pcard-head-title">
+                        <i class="bi bi-clipboard2-pulse me-2"></i>Vitals History
+                    </span>
+                    <span style="font-size:.72rem; color:#8492a6;">{{ records|length }} record{{ records|length|pluralize }}</span>
+                </div>
+                <div class="p-0">
+                    {% if records %}
+                    <table class="doc-table" style="padding:0 .6rem;">
+                        <thead>
+                            <tr>
+                                <th style="padding-left:1rem;">Date</th>
+                                <th>Temp</th><th>HR</th><th>SpO₂</th><th>AI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rec in records %}
+                            <tr>
+                                <td style="font-size:.76rem; color:#8492a6;">
+                                    {{ rec.uploaded_at|date:"d M Y" }}
+                                </td>
+                                <td class="{% if rec.temperature > 38 %}text-danger fw-bold{% endif %}">
+                                    {{ rec.temperature }}°
+                                </td>
+                                <td class="{% if rec.heart_rate > 100 %}text-warning fw-bold{% endif %}">
+                                    {{ rec.heart_rate }}
+                                </td>
+                                <td class="{% if rec.oxygen_saturation < 95 %}text-danger fw-bold{% endif %}">
+                                    {{ rec.oxygen_saturation }}%
+                                </td>
+                                <td>
+                                    <span class="risk-badge
+                                        {% if rec.ai_confidence_score >= 80 %}rb-critical
+                                        {% elif rec.ai_confidence_score >= 60 %}rb-high
+                                        {% elif rec.ai_confidence_score >= 35 %}rb-moderate
+                                        {% else %}rb-low{% endif %}">
+                                        {{ rec.ai_confidence_score }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-clipboard2-pulse"></i>
+                        No vitals recorded yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ── Patient profile summary ── #}
+            {% if patient.profile %}
+            <div class="pcard">
+                <div class="pcard-head">
+                    <span class="pcard-head-title">
+                        <i class="bi bi-person-vcard me-2"></i>Patient Info
+                    </span>
+                </div>
+                <div style="padding: .8rem 1rem;">
+                    {% if patient.profile.phone_number %}
+                    <div class="detail-row">
+                        <span class="detail-lbl"><i class="bi bi-phone me-1"></i>Phone</span>
+                        <span>{{ patient.profile.phone_number }}</span>
+                    </div>
+                    {% endif %}
+                    {% if patient.profile.gender %}
+                    <div class="detail-row">
+                        <span class="detail-lbl">Gender</span>
+                        <span>{{ patient.profile.gender }}</span>
+                    </div>
+                    {% endif %}
+                    {% if patient.profile.nhif_number %}
+                    <div class="detail-row">
+                        <span class="detail-lbl">NHIF/SHIF</span>
+                        <span class="fw-bold" style="color:var(--c-low);">
+                            <i class="bi bi-check-circle-fill me-1"></i>{{ patient.profile.nhif_number }}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if patient.profile.emergency_contact_name %}
+                    <div class="detail-row">
+                        <span class="detail-lbl">Emergency</span>
+                        <span>{{ patient.profile.emergency_contact_name }}
+                            {% if patient.profile.emergency_contact_phone %}
+                            · {{ patient.profile.emergency_contact_phone }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

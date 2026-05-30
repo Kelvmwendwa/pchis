@@ -1,0 +1,30 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="bi bi-calendar3 text-primary me-2"></i>Clinical Schedule</h2>
+        <button class="btn btn-primary rounded-pill px-4">+ New Appointment</button>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+                {% for appointment in appointments %}
+                    <div class="list-group-item p-3">
+                        <div class="d-flex justify-content-between">
+                            <h6 class="mb-1 fw-bold">{{ appointment.patient.get_full_name }}</h6>
+                            <span class="badge bg-info-subtle text-info">{{ appointment.time }}</span>
+                        </div>
+                        <small class="text-muted">Reason: {{ appointment.reason|truncatechars:50 }}</small>
+                    </div>
+                {% empty %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-calendar-x display-4"></i>
+                        <p class="mt-2">No appointments scheduled for today.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

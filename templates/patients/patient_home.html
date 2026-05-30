@@ -1,0 +1,565 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<style>
+  /* ── Design tokens ────────────────────────────────── */
+  :root {
+    --brand-deep:  #0a3d62;
+    --brand-mid:   #1a6a9c;
+    --brand-light: #e8f4fd;
+    --accent:      #6f42c1;
+    --accent-light:#f0ebfc;
+    --success:     #198754;
+    --warning:     #e6a817;
+    --danger:      #dc3545;
+  }
+
+  /* ── Layout ───────────────────────────────────────── */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.25rem;
+  }
+  @media (max-width: 992px) { .dash-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 576px) { .dash-grid { grid-template-columns: 1fr; } }
+
+  /* ── Cards ────────────────────────────────────────── */
+  .pcard {
+    background: #fff;
+    border-radius: 16px;
+    border: 1.5px solid #eef1f5;
+    box-shadow: 0 2px 10px rgba(0,0,0,.045);
+    transition: box-shadow .2s, transform .2s;
+    overflow: hidden;
+  }
+  .pcard:hover { box-shadow: 0 6px 20px rgba(0,0,0,.09); transform: translateY(-2px); }
+  .pcard-body { padding: 1.4rem; }
+
+
+  .hero-banner {
+    background: linear-gradient(135deg, var(--brand-deep) 0%, var(--accent) 100%);
+    border-radius: 18px;
+    padding: 2rem 2.2rem;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-banner::after {
+    content: '';
+    position: absolute; top: -40px; right: -40px;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,.06);
+    border-radius: 50%;
+  }
+
+  /* ── Health score ring ────────────────────────────── */
+  .score-ring-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+  .score-ring-wrap svg { transform: rotate(-90deg); }
+  .score-value {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 700; color: #fff;
+  }
+
+  /* ── Quick-action tiles ───────────────────────────── */
+  .qa-tile {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: .4rem; padding: 1.1rem .5rem;
+    border-radius: 14px; text-decoration: none;
+    font-size: .8rem; font-weight: 600; letter-spacing: .3px;
+    border: 1.5px solid #eef1f5;
+    background: #fff;
+    transition: all .2s; text-align: center; color: #444;
+  }
+  .qa-tile:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,.1); color: #222; }
+  .qa-tile .icon-wrap {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem;
+  }
+
+  /* ── Timeline ─────────────────────────────────────── */
+  .timeline { list-style: none; padding: 0; margin: 0; }
+  .timeline li { display: flex; gap: 1rem; padding: .75rem 0; border-bottom: 1px solid #f2f4f6; }
+  .timeline li:last-child { border-bottom: none; }
+  .tl-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    margin-top: 5px; flex-shrink: 0;
+  }
+
+  /* ── Vitals row ───────────────────────────────────── */
+  .vital-item { text-align: center; padding: .8rem; }
+  .vital-value { font-size: 1.4rem; font-weight: 700; color: var(--brand-deep); }
+  .vital-label { font-size: .72rem; color: #888; text-transform: uppercase; letter-spacing: .5px; }
+  .vital-unit  { font-size: .75rem; color: #aaa; }
+
+  /* ── Progress bar ─────────────────────────────────── */
+  .profile-bar { height: 6px; border-radius: 3px; background: #eee; overflow: hidden; }
+  .profile-bar-fill { height: 100%; border-radius: 3px; transition: width .5s; }
+
+  /* ── Access log entry ─────────────────────────────── */
+  .access-entry {
+    display: flex; align-items: center; gap: .8rem;
+    padding: .65rem .75rem; border-radius: 10px;
+    background: #f9fafb; margin-bottom: .5rem;
+    font-size: .85rem;
+  }
+
+  /* ── Section labels ───────────────────────────────── */
+  .section-label {
+    font-size: .7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: #999; margin-bottom: .75rem;
+  }
+</style>
+
+<div class="container-fluid py-4 px-3 px-md-4">
+
+
+  <div class="hero-banner mb-4 d-flex align-items-center gap-4 flex-wrap">
+    <div class="flex-grow-1">
+      <p class="mb-1 opacity-75" style="font-size:.8rem; letter-spacing:1px;">
+        {% if today.hour < 12 %}GOOD MORNING{% elif today.hour < 17 %}GOOD AFTERNOON{% else %}GOOD EVENING{% endif %}
+      </p>
+      <h2 class="fw-bold mb-1">{{ user.get_full_name|default:user.username }}</h2>
+      <p class="mb-2 opacity-75" style="font-size:.9rem;">
+        Patient ID: <strong>PCHIS-{{ user.id|add:"1000" }}</strong>
+        {% if profile and profile.nhif_number %}
+          &nbsp;·&nbsp; NHIF: <strong>{{ profile.nhif_number }}</strong>
+        {% endif %}
+      </p>
+
+      {# Health message in plain language #}
+      <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill"
+           style="background:rgba(255,255,255,.15); font-size:.85rem;">
+        {% if health_status == 'stable' %}
+          <i class="bi bi-check-circle-fill text-success"></i>
+        {% elif health_status == 'monitor' %}
+          <i class="bi bi-exclamation-circle-fill text-warning"></i>
+        {% elif health_status == 'critical' %}
+          <i class="bi bi-exclamation-octagon-fill text-danger"></i>
+        {% else %}
+          <i class="bi bi-activity"></i>
+        {% endif %}
+        {{ health_message }}
+      </div>
+    </div>
+
+    {# Health score ring #}
+    {% if health_score is not None %}
+    <div class="score-ring-wrap">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="8"/>
+        <circle cx="40" cy="40" r="32" fill="none"
+          stroke="{% if health_score >= 80 %}#ff6b6b{% elif health_score >= 50 %}#ffd166{% else %}#06d6a0{% endif %}"
+          stroke-width="8"
+          stroke-linecap="round"
+          stroke-dasharray="{{ health_score|floatformat:0 }} 100"
+          stroke-dasharray="{% widthratio health_score 100 201 %} 201"/>
+      </svg>
+      <div class="score-value">{{ health_score }}%</div>
+    </div>
+    <div class="text-white-50 small" style="min-width:80px;">
+      AI Health<br>Score
+    </div>
+    {% endif %}
+
+    {# Profile completion warning #}
+    {% if profile_completion < 100 %}
+    <a href="{% url 'patients:update_profile' %}"
+       class="btn btn-sm btn-warning rounded-pill px-3 text-dark fw-bold">
+      <i class="bi bi-pencil-fill me-1"></i>
+      Profile {{ profile_completion }}% — Complete it
+    </a>
+    {% endif %}
+  </div>
+
+
+  <div class="row g-2 mb-4">
+    <div class="col-4 col-md-2">
+      <a href="{% url 'appointments:book_appointment' %}" class="qa-tile">
+        <div class="icon-wrap" style="background:#e8f4fd;">
+          <i class="bi bi-calendar-plus" style="color:var(--brand-deep);"></i>
+        </div>
+        Book Appointment
+      </a>
+    </div>
+    <div class="col-4 col-md-2">
+      <a href="{% url 'records:record_list' %}" class="qa-tile">
+        <div class="icon-wrap" style="background:#f0f0ff;">
+          <i class="bi bi-file-medical" style="color:var(--accent);"></i>
+        </div>
+        My Records
+      </a>
+    </div>
+    <div class="col-4 col-md-2">
+      <a href="{% url 'records:patient_input_vitals' %}" class="qa-tile">
+        <div class="icon-wrap" style="background:#e8fff4;">
+          <i class="bi bi-heart-pulse" style="color:var(--success);"></i>
+        </div>
+        Log Vitals
+      </a>
+    </div>
+    <div class="col-4 col-md-2">
+      <a href="{% url 'messaging:inbox' %}" class="qa-tile position-relative">
+        <div class="icon-wrap" style="background:#fff3cd;">
+          <i class="bi bi-chat-dots" style="color:#b87a00;"></i>
+        </div>
+        Messages
+        {% if unread_messages %}
+        <span class="badge bg-danger rounded-pill"
+              style="position:absolute;top:8px;right:10px;font-size:.65rem;">
+          {{ unread_messages }}
+        </span>
+        {% endif %}
+      </a>
+    </div>
+    <div class="col-4 col-md-2">
+      <a href="{% url 'records:generate_access_code' %}" class="qa-tile">
+        <div class="icon-wrap" style="background:#fce8e8;">
+          <i class="bi bi-shield-lock" style="color:var(--danger);"></i>
+        </div>
+        Share Code
+      </a>
+    </div>
+    <div class="col-4 col-md-2">
+      <a href="{% url 'patients:update_profile' %}" class="qa-tile">
+        <div class="icon-wrap" style="background:#f0ebfc;">
+          <i class="bi bi-person-gear" style="color:var(--accent);"></i>
+        </div>
+        Edit Profile
+      </a>
+    </div>
+  </div>
+
+  <div class="dash-grid">
+
+    {# ─── COL 1: Next appointment + upcoming ─────────────────── #}
+    <div>
+      {% if next_appointment %}
+      <div class="pcard mb-3" style="border-left: 4px solid var(--brand-deep);">
+        <div class="pcard-body">
+          <div class="section-label">Next appointment</div>
+          <div class="d-flex align-items-start gap-3">
+            <div class="text-center px-3 py-2 rounded-3"
+                 style="background:var(--brand-light); min-width:56px;">
+              <div class="fw-bold" style="font-size:1.5rem; color:var(--brand-deep); line-height:1;">
+                {{ next_appointment.appointment_date|date:"d" }}
+              </div>
+              <div style="font-size:.7rem; color:var(--brand-mid); text-transform:uppercase;">
+                {{ next_appointment.appointment_date|date:"M" }}
+              </div>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-bold" style="color:var(--brand-deep);">
+                Dr. {{ next_appointment.doctor.get_full_name|default:next_appointment.doctor.username }}
+              </div>
+              <div class="text-muted small">
+                {{ next_appointment.appointment_date|time:"H:i" }}
+                {% if next_appointment.reason %}
+                  · {{ next_appointment.reason|truncatechars:40 }}
+                {% endif %}
+              </div>
+              <a href="{% url 'appointments:confirm_record_sharing' next_appointment.id %}"
+                 class="btn btn-sm btn-outline-primary rounded-pill mt-2">
+                <i class="bi bi-share-fill me-1"></i> Share my records
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Pending appointment notice #}
+      {% if pending_appointments %}
+      <div class="pcard mb-3" style="border-left: 4px solid var(--warning);">
+        <div class="pcard-body d-flex align-items-center gap-3">
+          <i class="bi bi-clock-history" style="color:var(--warning); font-size:1.5rem;"></i>
+          <div>
+            <div class="fw-bold small">{{ pending_appointments }} appointment{{ pending_appointments|pluralize }} pending</div>
+            <a href="{% url 'appointments:appointment_list' %}" class="small text-muted">
+              View all appointments →
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Recent appointment history #}
+      <div class="pcard">
+        <div class="pcard-body">
+          <div class="section-label">Appointment history</div>
+          {% if recent_appointments %}
+          <ul class="timeline">
+            {% for appt in recent_appointments %}
+            <li>
+              <div class="tl-dot
+                {% if appt.status == 'APPROVED' %}bg-success
+                {% elif appt.status == 'PENDING' %}bg-warning
+                {% else %}bg-secondary{% endif %}">
+              </div>
+              <div class="flex-grow-1">
+                <div class="small fw-bold">
+                  Dr. {{ appt.doctor.get_full_name|default:appt.doctor.username }}
+                </div>
+                <div class="small text-muted">
+                  {{ appt.appointment_date|date:"d M Y" }} ·
+                  <span class="badge
+                    {% if appt.status == 'APPROVED' %}bg-success
+                    {% elif appt.status == 'PENDING' %}bg-warning text-dark
+                    {% else %}bg-secondary{% endif %}
+                    rounded-pill" style="font-size:.65rem;">
+                    {{ appt.status|title }}
+                  </span>
+                </div>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-center py-3 text-muted small">
+            <i class="bi bi-calendar-x d-block mb-2" style="font-size:1.5rem;"></i>
+            No appointments yet.
+            <a href="{% url 'appointments:book_appointment' %}">Book one now →</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# ─── COL 2: Latest vitals + clinical history ─────────────── #}
+    <div>
+      {# Latest vitals card #}
+      {% if latest_record %}
+      <div class="pcard mb-3">
+        <div class="pcard-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="section-label mb-0">Latest vitals</div>
+            <small class="text-muted">{{ latest_record.uploaded_at|date:"d M Y" }}</small>
+          </div>
+          <div class="row g-0 text-center" style="border-radius:10px; overflow:hidden; border:1px solid #f0f0f0;">
+            <div class="col vital-item" style="border-right:1px solid #f0f0f0;">
+              <div class="vital-value" style="{% if latest_record.temperature > 38 %}color:var(--danger);{% endif %}">
+                {{ latest_record.temperature }}
+              </div>
+              <div class="vital-unit">°C</div>
+              <div class="vital-label">Temp</div>
+            </div>
+            <div class="col vital-item" style="border-right:1px solid #f0f0f0;">
+              <div class="vital-value" style="{% if latest_record.heart_rate > 100 %}color:var(--warning);{% endif %}">
+                {{ latest_record.heart_rate }}
+              </div>
+              <div class="vital-unit">bpm</div>
+              <div class="vital-label">Heart rate</div>
+            </div>
+            <div class="col vital-item" style="border-right:1px solid #f0f0f0;">
+              <div class="vital-value" style="{% if latest_record.oxygen_saturation < 95 %}color:var(--danger);{% endif %}">
+                {{ latest_record.oxygen_saturation }}
+              </div>
+              <div class="vital-unit">%</div>
+              <div class="vital-label">SpO₂</div>
+            </div>
+            <div class="col vital-item">
+              <div class="vital-value">{{ latest_record.blood_pressure_sys }}</div>
+              <div class="vital-unit">mmHg</div>
+              <div class="vital-label">BP sys</div>
+            </div>
+          </div>
+          <a href="{% url 'records:patient_input_vitals' %}"
+             class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-3">
+            <i class="bi bi-plus-circle me-1"></i> Update vitals
+          </a>
+        </div>
+      </div>
+      {% else %}
+      <div class="pcard mb-3" style="border:2px dashed #ddd;">
+        <div class="pcard-body text-center py-4">
+          <i class="bi bi-heart-pulse text-muted d-block mb-2" style="font-size:2rem;"></i>
+          <p class="text-muted small mb-2">No vitals recorded yet.</p>
+          <a href="{% url 'records:patient_input_vitals' %}"
+             class="btn btn-sm btn-primary rounded-pill">
+            Log my first vitals
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Clinical history timeline #}
+      <div class="pcard">
+        <div class="pcard-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="section-label mb-0">Clinical history</div>
+            <a href="{% url 'records:record_list' %}" class="small text-muted">View all →</a>
+          </div>
+          {% if clinical_history %}
+          <ul class="timeline">
+            {% for entry in clinical_history %}
+            <li>
+              <div class="tl-dot" style="background:var(--brand-deep);"></div>
+              <div>
+                <div class="small fw-bold">{{ entry.diagnosis|truncatechars:50 }}</div>
+                <div class="small text-muted">
+                  {{ entry.hospital_name }} · {{ entry.date_diagnosed|date:"d M Y" }}
+                </div>
+                {% if entry.prescription %}
+                <div class="mt-1 px-2 py-1 rounded-2 small"
+                     style="background:#f8f9fa; font-family:monospace; font-size:.78rem; color:var(--brand-deep);">
+                  {{ entry.prescription|truncatechars:60 }}
+                </div>
+                {% endif %}
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-center py-3 text-muted small">
+            <i class="bi bi-folder2-open d-block mb-2" style="font-size:1.5rem;"></i>
+            No clinical history yet.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# ─── COL 3: Privacy log + NHIF + profile + add record ──── #}
+    <div>
+
+      {# ── WHO ACCESSED MY RECORDS (transparency log) ── #}
+      <div class="pcard mb-3">
+        <div class="pcard-body">
+          <div class="section-label">Who accessed my records</div>
+          {% if access_log %}
+          {% for appt in access_log %}
+          <div class="access-entry">
+            <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center"
+                 style="width:32px;height:32px;flex-shrink:0;font-size:.85rem;">
+              <i class="bi bi-person-badge"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-bold" style="font-size:.85rem;">
+                Dr. {{ appt.doctor.get_full_name|default:appt.doctor.username }}
+              </div>
+              <div class="text-muted" style="font-size:.75rem;">
+                {{ appt.appointment_date|date:"d M Y, H:i" }}
+              </div>
+            </div>
+            <span class="badge bg-success-subtle text-success rounded-pill" style="font-size:.65rem;">
+              Authorised
+            </span>
+          </div>
+          {% endfor %}
+          <p class="text-muted small mb-0 mt-2">
+            <i class="bi bi-shield-check text-success me-1"></i>
+            Only doctors with your approval code can access your records.
+          </p>
+          {% else %}
+          <div class="text-muted small text-center py-2">
+            <i class="bi bi-shield-lock d-block mb-1" style="font-size:1.5rem;"></i>
+            No one has accessed your records yet.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# ── NHIF / SHIF STATUS ── #}
+      <div class="pcard mb-3" style="border-left: 4px solid {% if nhif_linked %}var(--success){% else %}var(--warning){% endif %};">
+        <div class="pcard-body d-flex align-items-center gap-3">
+          <i class="bi bi-card-checklist"
+             style="font-size:1.8rem; color:{% if nhif_linked %}var(--success){% else %}var(--warning){% endif %};"></i>
+          <div>
+            <div class="fw-bold small">
+              NHIF / SHIF Insurance
+            </div>
+            {% if nhif_linked %}
+            <div class="text-success small">
+              <i class="bi bi-check-circle-fill me-1"></i>
+              Linked — {{ profile.nhif_number }}
+            </div>
+            {% else %}
+            <div class="text-warning small">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              Not linked.
+              <a href="{% url 'patients:update_profile' %}">Add your number →</a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# ── PROFILE COMPLETION ── #}
+      <div class="pcard mb-3">
+        <div class="pcard-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="section-label mb-0">Profile completeness</div>
+            <span class="fw-bold small" style="color:var(--brand-deep);">{{ profile_completion }}%</span>
+          </div>
+          <div class="profile-bar mb-2">
+            <div class="profile-bar-fill"
+                 style="width:{{ profile_completion }}%;
+                        background:{% if profile_completion < 50 %}var(--danger){% elif profile_completion < 100 %}var(--warning){% else %}var(--success){% endif %};">
+            </div>
+          </div>
+          {% if profile_completion < 100 %}
+          <a href="{% url 'patients:update_profile' %}"
+             class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-1">
+            Complete your profile
+          </a>
+          {% else %}
+          <div class="text-success small text-center">
+            <i class="bi bi-check-circle-fill me-1"></i> Profile is complete
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# ── ADD MEDICAL RECORD (compact) ── #}
+      <div class="pcard">
+        <div class="pcard-body">
+          <div class="section-label">Add a medical record</div>
+          <form method="POST" enctype="multipart/form-data"
+                action="{% url 'records:upload_record' %}">
+            {% csrf_token %}
+            <div class="mb-2">
+              <input type="text" name="hospital_name"
+                     class="form-control form-control-sm rounded-3"
+                     placeholder="Hospital / facility name" required>
+            </div>
+            <div class="mb-2">
+              <input type="text" name="doctor_name"
+                     class="form-control form-control-sm rounded-3"
+                     placeholder="Attending doctor">
+            </div>
+            <div class="mb-2">
+              <input type="date" name="admission_date"
+                     class="form-control form-control-sm rounded-3" required>
+            </div>
+            <div class="mb-2">
+              <input type="text" name="description"
+                     class="form-control form-control-sm rounded-3"
+                     placeholder="Brief description / symptoms">
+            </div>
+            <div class="mb-3">
+              <input type="file" name="document"
+                     class="form-control form-control-sm rounded-3"
+                     accept="image/*,.pdf">
+            </div>
+            <button type="submit"
+                    class="btn btn-primary btn-sm rounded-pill w-100 fw-bold"
+                    style="background:var(--brand-deep); border:none;">
+              <i class="bi bi-plus-circle me-1"></i> Save Record
+            </button>
+          </form>
+
+          <div class="mt-3 small text-muted d-flex align-items-start gap-2">
+            <i class="bi bi-shield-check text-primary mt-1" style="flex-shrink:0;"></i>
+            Your records are encrypted. Only doctors with your
+            6-digit access code can view them.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>{# end dash-grid #}
+
+</div>
+{% endblock %}

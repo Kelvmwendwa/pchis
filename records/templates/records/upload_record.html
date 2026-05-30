@@ -1,0 +1,123 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4">
+
+                <div class="card-header bg-white p-4 border-bottom">
+                    <h4 class="fw-bold mb-0 text-primary">
+                        <i class="bi bi-journal-plus me-2"></i>New Medical Entry
+                    </h4>
+                    <p class="text-muted small mb-0">
+                        Add details to your permanent digital health record.
+                    </p>
+                </div>
+
+                <div class="card-body p-4">
+                    {#
+                        FIX: original template used {{ form.category }} and {{ form.title }}
+                        which don't exist on MedicalRecord. The view builds the record
+                        directly from request.POST — no form object is passed.
+                        All fields now use raw <input> tags matching the view's
+                        request.POST.get() calls exactly.
+                    #}
+                    <form method="POST" enctype="multipart/form-data"
+                          action="{% url 'records:upload_record' %}">
+                        {% csrf_token %}
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    Hospital / Facility Name
+                                </label>
+                                <input type="text" name="hospital_name"
+                                       class="form-control rounded-3"
+                                       placeholder="e.g. Nairobi Hospital" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Attending Doctor</label>
+                                <input type="text" name="doctor_name"
+                                       class="form-control rounded-3"
+                                       placeholder="e.g. Dr. Kamau">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold">
+                                    Medical Notes / Symptoms
+                                </label>
+                                {# Maps to 'description' field on MedicalRecord #}
+                                <textarea name="description"
+                                          class="form-control rounded-3" rows="3"
+                                          placeholder="Describe symptoms or reason for visit…"></textarea>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Admission Date</label>
+                                <input type="date" name="admission_date"
+                                       class="form-control rounded-3">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    Discharge Date
+                                    <span class="text-muted fw-normal small">(optional)</span>
+                                </label>
+                                <input type="date" name="discharge_date"
+                                       class="form-control rounded-3">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold">
+                                    Upload Supporting Document
+                                    <span class="text-muted fw-normal small">
+                                        (PDF / JPG — optional)
+                                    </span>
+                                </label>
+                                <input type="file" name="document"
+                                       class="form-control rounded-3"
+                                       accept=".pdf,.jpg,.jpeg,.png">
+                                <div class="form-text">
+                                    If you have a physical copy, take a clear photo
+                                    and upload it here.
+                                </div>
+                            </div>
+
+                            <div class="col-12 mt-2">
+                                <hr>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a href="{% url 'records:record_list' %}"
+                                       class="btn btn-light rounded-pill px-4">
+                                        Cancel
+                                    </a>
+                                    <button type="submit"
+                                            class="btn btn-primary rounded-pill px-5
+                                                   fw-bold shadow-sm">
+                                        Save to My Profile
+                                        <i class="bi bi-arrow-right ms-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-4 p-3 bg-info bg-opacity-10 border border-info
+                        border-opacity-25 rounded-4 d-flex align-items-center">
+                <i class="bi bi-shield-check text-info fs-3 me-3"></i>
+                <small class="text-dark">
+                    <strong>PCHIS Privacy:</strong>
+                    Your data is encrypted. Only doctors with an active
+                    5-minute access code can view these records.
+                </small>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

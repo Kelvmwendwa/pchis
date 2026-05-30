@@ -1,0 +1,1063 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════
+   TOKENS (inherit from base, extend here)
+══════════════════════════════════════════════════ */
+:root {
+    --c-critical : #dc3545;
+    --c-high     : #fd7e14;
+    --c-moderate : #d4a017;
+    --c-low      : #198754;
+    --deep       : #0a3d62;
+    --font-d     : 'DM Sans', sans-serif;
+}
+
+.doc-page {
+    font-family: var(--font-d);
+    padding: 1.4rem 1.6rem 3rem;
+    background: #f0f4f8;
+    min-height: 100vh;
+}
+
+/* ── Stat strip ─────────────────────────────────── */
+.stat-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: .9rem; margin-bottom: 1.4rem;
+}
+@media (max-width:900px) { .stat-strip { grid-template-columns: repeat(3,1fr); } }
+@media (max-width:580px) { .stat-strip { grid-template-columns: repeat(2,1fr); } }
+
+.stat-tile {
+    background: #fff; border-radius: 12px;
+    padding: 1rem 1.2rem; cursor: pointer;
+    border: 1px solid #e4e9f0; border-top: 3px solid;
+    box-shadow: 0 1px 5px rgba(0,0,0,.04);
+    transition: transform .15s, box-shadow .15s;
+}
+.stat-tile:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.09); }
+.stat-tile .num { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+.stat-tile .lbl { font-size: .68rem; text-transform: uppercase; letter-spacing: .8px; color: #8492a6; margin-top: .2rem; }
+.st-critical { border-top-color: var(--c-critical) !important; }
+.st-high     { border-top-color: var(--c-high)     !important; }
+.st-moderate { border-top-color: var(--c-moderate) !important; }
+.st-low      { border-top-color: var(--c-low)      !important; }
+.st-total    { border-top-color: var(--deep)        !important; }
+
+/* ── Cards ──────────────────────────────────────── */
+.pcard {
+    background: #fff; border-radius: 14px;
+    border: 1px solid #e4e9f0;
+    box-shadow: 0 1px 6px rgba(0,0,0,.04); overflow: hidden;
+}
+.pcard-head {
+    padding: .85rem 1.2rem; border-bottom: 1px solid #e4e9f0;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.pcard-head-title {
+    font-size: .78rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .8px; color: #8492a6;
+}
+.pcard-body { padding: 1.1rem 1.2rem; }
+
+/* ── Triage grid ────────────────────────────────── */
+.triage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.tcard {
+    background: #fff; border-radius: 13px; border-left: 4px solid;
+    padding: 1.1rem 1.2rem; position: relative;
+    box-shadow: 0 1px 6px rgba(0,0,0,.05);
+    transition: transform .18s, box-shadow .18s;
+}
+.tcard:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.09); }
+.tcard-critical { border-color: var(--c-critical); }
+.tcard-high     { border-color: var(--c-high);     }
+.tcard-moderate { border-color: var(--c-moderate); }
+.tcard-low      { border-color: var(--c-low);      }
+
+.risk-badge {
+    font-size: .6rem; font-weight: 700; letter-spacing: .6px;
+    text-transform: uppercase; padding: 2px 9px; border-radius: 20px; border: 1px solid;
+}
+.rb-critical { background:#fff0f0; color:var(--c-critical); border-color:#fcc; }
+.rb-high     { background:#fff4ec; color:var(--c-high);     border-color:#fdd; }
+.rb-moderate { background:#fffbea; color:var(--c-moderate); border-color:#f5e0a0; }
+.rb-low      { background:#f0fff8; color:var(--c-low);      border-color:#b8f0d4; }
+
+.score-bar-wrap { background:#f0f2f5; border-radius:4px; height:5px; overflow:hidden; margin:.3rem 0 .7rem; }
+.score-bar-fill { height:100%; border-radius:4px; }
+
+.vitals-row { display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:.8rem; }
+.vchip      { font-size:.7rem; padding:2px 7px; border-radius:5px; background:#f4f6f9; color:#555; }
+.vchip.warn  { background:#fff3cd; color:#856404; }
+.vchip.alert { background:#f8d7da; color:#842029; }
+
+.pulse-dot {
+    position:absolute; top:.9rem; right:.9rem;
+    width:9px; height:9px; border-radius:50%; background:var(--c-critical);
+}
+@keyframes pulse-ring {
+    0%   { box-shadow:0 0 0 0 rgba(220,53,69,.55); }
+    70%  { box-shadow:0 0 0 7px rgba(220,53,69,0); }
+    100% { box-shadow:0 0 0 0 rgba(220,53,69,0); }
+}
+.pulse-dot { animation: pulse-ring 1.4s ease-out infinite; }
+
+/* ── Filter bar ─────────────────────────────────── */
+.filter-bar { display:flex; gap:.4rem; flex-wrap:wrap; }
+.filter-btn {
+    font-size:.72rem; padding:.28rem .85rem; border-radius:20px;
+    border:1.5px solid #e4e9f0; background:#fff;
+    color:#666; cursor:pointer; transition:.15s;
+}
+.filter-btn:hover, .filter-btn.active { background:var(--deep); color:#fff; border-color:var(--deep); }
+
+/* ── Tables ─────────────────────────────────────── */
+.doc-table { width:100%; border-collapse:separate; border-spacing:0 .35rem; }
+.doc-table thead th {
+    font-size:.67rem; text-transform:uppercase; letter-spacing:.8px;
+    color:#8492a6; padding:.4rem .9rem; font-weight:600; white-space:nowrap;
+}
+.doc-table tbody tr {
+    background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.04);
+    transition:transform .15s;
+}
+.doc-table tbody tr:hover { transform:translateX(3px); }
+.doc-table tbody td {
+    padding:.7rem .9rem; font-size:.82rem;
+    border-top:1px solid #e4e9f0; border-bottom:1px solid #e4e9f0;
+}
+.doc-table tbody td:first-child { border-left:1px solid #e4e9f0; border-radius:8px 0 0 8px; }
+.doc-table tbody td:last-child  { border-right:1px solid #e4e9f0; border-radius:0 8px 8px 0; }
+
+.status-pill { font-size:.65rem; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase; }
+.sp-approved    { background:#d1f2e0; color:#0a6b35; }
+.sp-pending     { background:#fff3cd; color:#856404; }
+.sp-rejected    { background:#fde8ea; color:#842029; }
+.sp-in-progress { background:#cfe2ff; color:#0a3d62; }
+
+/* ── Empty state ────────────────────────────────── */
+.empty-state { text-align:center; padding:2.5rem 1rem; color:#8492a6; }
+.empty-state i { font-size:2rem; display:block; margin-bottom:.6rem; }
+
+/* ── Code input ─────────────────────────────────── */
+.code-input {
+    font-size:1.8rem; font-weight:700; text-align:center;
+    letter-spacing:.5rem; border:2px solid #e4e9f0;
+    border-radius:12px; padding:.6rem 1rem; width:100%;
+    transition:border-color .2s; font-family:var(--font-d);
+}
+.code-input:focus { border-color:var(--deep); outline:none; box-shadow:0 0 0 3px rgba(10,61,98,.12); }
+
+/* ── Messages ───────────────────────────────────── */
+.msg-row {
+    display:flex; align-items:flex-start; gap:.9rem;
+    padding:.8rem; border-radius:10px; border-bottom:1px solid #f0f4f8;
+    cursor:pointer; transition:background .15s; text-decoration:none; color:inherit;
+}
+.msg-row:hover { background:#f8fafc; }
+.msg-row.unread { background:#f0f4ff; }
+.msg-avatar {
+    width:36px; height:36px; border-radius:50%; flex-shrink:0;
+    background:linear-gradient(135deg, var(--deep), #6f42c1);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:.8rem; color:#fff;
+}
+
+/* ── Form controls ──────────────────────────────── */
+.form-lbl { font-size:.73rem; font-weight:600; color:#555; margin-bottom:.3rem; display:block; }
+.form-ctrl {
+    border:1.5px solid #e4e9f0; border-radius:9px;
+    padding:.5rem .85rem; font-size:.83rem; width:100%;
+    transition:border-color .2s; font-family:var(--font-d);
+}
+.form-ctrl:focus { border-color:var(--deep); outline:none; box-shadow:0 0 0 3px rgba(10,61,98,.1); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="doc-page">
+
+    {# Doctor greeting #}
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-0" style="color:var(--deep); font-family:var(--font-d);">
+                Clinical Command Centre
+            </h4>
+            <p class="text-muted mb-0" style="font-size:.82rem;">
+                Dr. {{ request.user.get_full_name|default:request.user.username }}
+                &nbsp;·&nbsp; {{ now|date:"l, d F Y" }}
+            </p>
+        </div>
+        <button class="btn btn-sm rounded-pill px-4 fw-bold"
+                style="background:var(--deep); color:#fff; border:none; font-size:.78rem;"
+                onclick="showDocSection('lookup')">
+            <i class="bi bi-qr-code-scan me-1"></i> Scan Patient Code
+        </button>
+    </div>
+
+    {# Clickable stat strip #}
+    <div class="stat-strip">
+        <div class="stat-tile st-total" onclick="showDocSection('triage')">
+            <div class="num" style="color:var(--deep);">{{ total_patients }}</div>
+            <div class="lbl">Total patients</div>
+        </div>
+        <div class="stat-tile st-critical" onclick="filterAndShow('CRITICAL')">
+            <div class="num" style="color:var(--c-critical);">{{ critical_count }}</div>
+            <div class="lbl">Critical</div>
+        </div>
+        <div class="stat-tile st-high" onclick="filterAndShow('HIGH')">
+            <div class="num" style="color:var(--c-high);">{{ high_count }}</div>
+            <div class="lbl">High risk</div>
+        </div>
+        <div class="stat-tile st-moderate" onclick="filterAndShow('MODERATE')">
+            <div class="num" style="color:var(--c-moderate);">{{ moderate_count }}</div>
+            <div class="lbl">Monitoring</div>
+        </div>
+        <div class="stat-tile st-low" onclick="filterAndShow('LOW')">
+            <div class="num" style="color:var(--c-low);">{{ low_count }}</div>
+            <div class="lbl">Stable</div>
+        </div>
+    </div>
+
+
+    <div id="sec-triage" class="doc-section active">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+            <span style="font-size:.7rem; font-weight:700; text-transform:uppercase;
+                         letter-spacing:1px; color:#8492a6;">
+                Patient triage — {{ total_patients }} monitored
+            </span>
+            <div class="filter-bar" id="filterBar">
+                <button class="filter-btn active" data-filter="ALL"      onclick="filterCards(this)">All</button>
+                <button class="filter-btn" data-filter="CRITICAL"        onclick="filterCards(this)">🔴 Critical</button>
+                <button class="filter-btn" data-filter="HIGH"            onclick="filterCards(this)">🟠 High</button>
+                <button class="filter-btn" data-filter="MODERATE"        onclick="filterCards(this)">🟡 Moderate</button>
+                <button class="filter-btn" data-filter="LOW"             onclick="filterCards(this)">🟢 Stable</button>
+            </div>
+        </div>
+
+        {% if triage_records %}
+        <div class="triage-grid" id="triageGrid">
+            {% for r in triage_records %}
+            <div class="tcard tcard-{{ r.risk_level|lower }}" data-risk="{{ r.risk_level }}">
+                {% if r.risk_level == 'CRITICAL' %}<div class="pulse-dot"></div>{% endif %}
+
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                    <div>
+                        <div class="fw-bold" style="font-size:.9rem;">
+                            {{ r.patient.get_full_name|default:r.patient.username }}
+                        </div>
+                        <div style="font-size:.68rem; color:#8492a6;">
+                            PCHIS-{{ r.patient.id|add:"1000" }}
+                        </div>
+                    </div>
+                    <span class="risk-badge rb-{{ r.risk_level|lower }}">{{ r.risk_level }}</span>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 mt-2">
+                    <span style="font-size:.65rem; color:#8492a6; text-transform:uppercase; letter-spacing:.6px;">AI Score</span>
+                    <span class="fw-bold" style="font-size:.88rem; color:
+                        {% if r.risk_level == 'CRITICAL' %}var(--c-critical)
+                        {% elif r.risk_level == 'HIGH' %}var(--c-high)
+                        {% elif r.risk_level == 'MODERATE' %}var(--c-moderate)
+                        {% else %}var(--c-low){% endif %};">
+                        {{ r.ai_confidence_score }}%
+                    </span>
+                </div>
+                <div class="score-bar-wrap">
+                    <div class="score-bar-fill" style="width:{{ r.ai_confidence_score }}%; background:
+                        {% if r.risk_level == 'CRITICAL' %}var(--c-critical)
+                        {% elif r.risk_level == 'HIGH' %}var(--c-high)
+                        {% elif r.risk_level == 'MODERATE' %}var(--c-moderate)
+                        {% else %}var(--c-low){% endif %};"></div>
+                </div>
+
+                <div class="vitals-row">
+                    <span class="vchip {% if r.temperature > 38 %}alert{% endif %}">🌡 {{ r.temperature }}°C</span>
+                    <span class="vchip {% if r.heart_rate > 100 or r.heart_rate < 50 %}warn{% endif %}">♥ {{ r.heart_rate }} bpm</span>
+                    <span class="vchip {% if r.oxygen_saturation < 95 %}alert{% endif %}">O₂ {{ r.oxygen_saturation }}%</span>
+                    <span class="vchip {% if r.blood_glucose > 7 %}warn{% endif %}">Glc {{ r.blood_glucose }}</span>
+                </div>
+
+                <div class="rounded-2 px-2 py-2 mb-3"
+                     style="background:
+                        {% if r.risk_level == 'CRITICAL' %}#fff0f0
+                        {% elif r.risk_level == 'HIGH' %}#fff4ec
+                        {% elif r.risk_level == 'MODERATE' %}#fffbea
+                        {% else %}#f0fff8{% endif %};
+                     font-size:.76rem; color:#333;">
+                    {% if r.risk_level == 'CRITICAL' %}<i class="bi bi-exclamation-octagon-fill me-1" style="color:var(--c-critical);"></i>
+                    {% elif r.risk_level == 'HIGH' %}<i class="bi bi-exclamation-triangle-fill me-1" style="color:var(--c-high);"></i>
+                    {% elif r.risk_level == 'MODERATE' %}<i class="bi bi-eye-fill me-1" style="color:var(--c-moderate);"></i>
+                    {% else %}<i class="bi bi-check-circle-fill me-1" style="color:var(--c-low);"></i>{% endif %}
+                    {{ r.risk_action }}
+                </div>
+
+                <div style="font-size:.68rem; color:#8492a6; margin-bottom:.8rem;">
+                    Last updated: {{ r.uploaded_at|date:"d M Y, H:i" }}
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a href="{% url 'records:view_patient_history' r.patient.id %}"
+                       class="btn btn-sm btn-outline-secondary flex-grow-1 rounded-2">
+                        <i class="bi bi-clock-history me-1"></i>History
+                    </a>
+                    <a href="{% url 'records:add_clinical_record' r.patient.id %}"
+                       class="btn btn-sm flex-grow-1 rounded-2 fw-bold"
+                       style="background:var(--deep); color:#fff; border:none;">
+                        <i class="bi bi-plus-circle me-1"></i>Add Record
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="pcard">
+            <div class="empty-state">
+                <i class="bi bi-activity"></i>
+                No patient records yet. They appear here once patients submit vitals.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+
+    <div id="sec-schedule" class="doc-section">
+
+        {# ── Summary mini-strip ── #}
+        <div class="d-flex gap-3 mb-3 flex-wrap">
+            <div class="pcard flex-fill text-center" style="padding:.9rem; min-width:120px;">
+                <div style="font-size:1.6rem; font-weight:700; color:var(--deep); line-height:1;">
+                    {{ today_appointments|length }}
+                </div>
+                <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.7px; color:#8492a6; margin-top:.2rem;">
+                    Today
+                </div>
+            </div>
+            <div class="pcard flex-fill text-center" style="padding:.9rem; min-width:120px;">
+                <div style="font-size:1.6rem; font-weight:700; color:var(--c-high); line-height:1;">
+                    {{ pending_approvals|length }}
+                </div>
+                <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.7px; color:#8492a6; margin-top:.2rem;">
+                    Pending
+                </div>
+            </div>
+            <div class="pcard flex-fill text-center" style="padding:.9rem; min-width:120px;">
+                <div style="font-size:1.6rem; font-weight:700; color:var(--c-low); line-height:1;">
+                    {{ all_appointments|length }}
+                </div>
+                <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.7px; color:#8492a6; margin-top:.2rem;">
+                    Total
+                </div>
+            </div>
+        </div>
+
+        {# ── Pending approvals — action required first ── #}
+        {% if pending_approvals %}
+        <div class="pcard mb-3" style="border-left:4px solid var(--c-high);">
+            <div class="pcard-head">
+                <span class="pcard-head-title">
+                    <i class="bi bi-clock-history me-2" style="color:var(--c-high);"></i>
+                    Awaiting Your Approval
+                </span>
+                <span style="background:#fff3cd; color:#856404; font-size:.68rem; font-weight:700;
+                             padding:3px 10px; border-radius:20px;">
+                    {{ pending_approvals|length }} waiting
+                </span>
+            </div>
+            <div class="p-0">
+                <table class="doc-table" style="padding:0 .8rem;">
+                    <thead><tr>
+                        <th style="padding-left:1.2rem;">Patient</th>
+                        <th>Requested date</th>
+                        <th>Reason</th>
+                        <th>Actions</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for a in pending_approvals %}
+                        <tr id="appt-row-{{ a.id }}">
+                            <td>
+                                <div class="fw-bold">{{ a.patient.get_full_name|default:a.patient.username }}</div>
+                                <div style="font-size:.7rem; color:#8492a6;">PCHIS-{{ a.patient.id|add:"1000" }}</div>
+                            </td>
+                            <td style="font-size:.8rem;">
+                                {{ a.appointment_date|date:"d M Y" }}<br>
+                                <span style="font-size:.72rem; color:#8492a6;">{{ a.appointment_date|time:"H:i" }}</span>
+                            </td>
+                            <td style="color:#8492a6; font-size:.78rem;">
+                                {{ a.reason|default:"General consultation"|truncatechars:45 }}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <button class="btn btn-sm btn-success rounded-2 fw-bold"
+                                            style="font-size:.72rem; padding:.3rem .8rem;"
+                                            onclick="updateApptStatus({{ a.id }}, 'APPROVED', this)">
+                                        <i class="bi bi-check2-circle me-1"></i>Approve
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger rounded-2"
+                                            style="font-size:.72rem; padding:.3rem .8rem;"
+                                            onclick="updateApptStatus({{ a.id }}, 'REJECTED', this)">
+                                        <i class="bi bi-x-circle me-1"></i>Reject
+                                    </button>
+                                    <a href="{% url 'records:view_patient_history' a.patient.id %}"
+                                       class="btn btn-sm btn-outline-secondary rounded-2"
+                                       style="font-size:.72rem; padding:.3rem .8rem;">
+                                        <i class="bi bi-file-medical me-1"></i>Records
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Today's confirmed schedule ── #}
+        <div class="pcard mb-3">
+            <div class="pcard-head">
+                <span class="pcard-head-title">
+                    <i class="bi bi-calendar-check me-2"></i>
+                    Today's Schedule — {{ now|date:"d M Y" }}
+                </span>
+                <span style="background:var(--deep); color:#fff; font-size:.68rem;
+                             padding:3px 10px; border-radius:20px;">
+                    {{ today_appointments|length }} confirmed
+                </span>
+            </div>
+            <div class="p-0">
+                {% if today_appointments %}
+                <table class="doc-table" style="padding:0 .8rem;">
+                    <thead><tr>
+                        <th style="padding-left:1.2rem;">Time</th>
+                        <th>Patient</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for a in today_appointments %}
+                        <tr id="appt-row-{{ a.id }}">
+                            <td class="fw-bold" style="color:var(--deep); font-size:.9rem;">
+                                {{ a.appointment_date|time:"H:i" }}
+                            </td>
+                            <td>
+                                <div class="fw-bold">{{ a.patient.get_full_name|default:a.patient.username }}</div>
+                                <div style="font-size:.7rem; color:#8492a6;">PCHIS-{{ a.patient.id|add:"1000" }}</div>
+                            </td>
+                            <td style="color:#8492a6; font-size:.78rem;">
+                                {{ a.reason|default:"General consultation"|truncatechars:40 }}
+                            </td>
+                            <td>
+                                <span class="status-pill sp-{{ a.status|lower|cut:" " }}">
+                                    {{ a.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm rounded-2 fw-bold"
+                                            style="background:var(--deep); color:#fff; border:none;
+                                                   font-size:.7rem; padding:.25rem .7rem;"
+                                            onclick="updateApptStatus({{ a.id }}, 'IN PROGRESS', this)">
+                                        <i class="bi bi-play-circle me-1"></i>Start
+                                    </button>
+                                    <a href="{% url 'records:view_patient_history' a.patient.id %}"
+                                       class="btn btn-sm btn-outline-primary rounded-2"
+                                       style="font-size:.7rem; padding:.25rem .7rem;">
+                                        <i class="bi bi-file-medical me-1"></i>Records
+                                    </a>
+                                    <a href="{% url 'records:add_clinical_record' a.patient.id %}"
+                                       class="btn btn-sm btn-outline-secondary rounded-2"
+                                       style="font-size:.7rem; padding:.25rem .7rem;">
+                                        <i class="bi bi-plus-circle me-1"></i>Add Note
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-calendar-x"></i>
+                    No appointments confirmed for today.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ── All appointments (full history + future) ── #}
+        <div class="pcard">
+            <div class="pcard-head">
+                <span class="pcard-head-title">
+                    <i class="bi bi-calendar3 me-2"></i>All Appointments
+                </span>
+                <div class="d-flex gap-2 align-items-center">
+                    <input type="text" placeholder="Search patient…"
+                           class="form-ctrl" style="max-width:180px; font-size:.75rem;"
+                           oninput="filterAppts(this.value)">
+                    <select class="form-ctrl" style="max-width:130px; font-size:.75rem;"
+                            onchange="filterApptStatus(this.value)">
+                        <option value="">All statuses</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                        <option value="IN PROGRESS">In Progress</option>
+                    </select>
+                </div>
+            </div>
+            <div class="p-0">
+                {% if all_appointments %}
+                <table class="doc-table" id="allApptsTable" style="padding:0 .8rem;">
+                    <thead><tr>
+                        <th style="padding-left:1.2rem;">Patient</th>
+                        <th>Date & Time</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for a in all_appointments %}
+                        <tr id="appt-row-{{ a.id }}"
+                            data-patient="{{ a.patient.get_full_name|lower|default:a.patient.username|lower }}"
+                            data-status="{{ a.status }}">
+                            <td>
+                                <div class="fw-bold">{{ a.patient.get_full_name|default:a.patient.username }}</div>
+                                <div style="font-size:.7rem; color:#8492a6;">PCHIS-{{ a.patient.id|add:"1000" }}</div>
+                            </td>
+                            <td style="font-size:.8rem;">
+                                {{ a.appointment_date|date:"d M Y" }}<br>
+                                <span style="font-size:.72rem; color:#8492a6;">{{ a.appointment_date|time:"H:i" }}</span>
+                            </td>
+                            <td style="color:#8492a6; font-size:.78rem;">
+                                {{ a.reason|default:"—"|truncatechars:40 }}
+                            </td>
+                            <td>
+                                <span class="status-pill sp-{{ a.status|lower|cut:" " }}">
+                                    {{ a.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    {% if a.status == 'PENDING' %}
+                                    <button class="btn btn-sm btn-success rounded-2"
+                                            style="font-size:.68rem; padding:.2rem .6rem;"
+                                            onclick="updateApptStatus({{ a.id }}, 'APPROVED', this)">
+                                        <i class="bi bi-check2"></i> Approve
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger rounded-2"
+                                            style="font-size:.68rem; padding:.2rem .6rem;"
+                                            onclick="updateApptStatus({{ a.id }}, 'REJECTED', this)">
+                                        <i class="bi bi-x"></i> Reject
+                                    </button>
+                                    {% elif a.status == 'APPROVED' %}
+                                    <button class="btn btn-sm rounded-2"
+                                            style="background:var(--deep); color:#fff; border:none; font-size:.68rem; padding:.2rem .6rem;"
+                                            onclick="updateApptStatus({{ a.id }}, 'IN PROGRESS', this)">
+                                        <i class="bi bi-play-circle"></i> Start
+                                    </button>
+                                    {% endif %}
+                                    <a href="{% url 'records:view_patient_history' a.patient.id %}"
+                                       class="btn btn-sm btn-outline-secondary rounded-2"
+                                       style="font-size:.68rem; padding:.2rem .6rem;">
+                                        Records
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-calendar3"></i>
+                    No appointments in the system yet.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# sec-pending kept as alias so old links still work #}
+    <div id="sec-pending" class="doc-section"></div>
+
+    <div id="sec-lookup" class="doc-section">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="pcard mb-3">
+                    <div class="pcard-head">
+                        <span class="pcard-head-title">
+                            <i class="bi bi-shield-lock me-2" style="color:#6f42c1;"></i>
+                            Patient Code Verification
+                        </span>
+                    </div>
+                    <div class="pcard-body">
+                        <p class="text-muted mb-3" style="font-size:.85rem;">
+                            Ask the patient to generate a 6-digit code from their dashboard.
+                            It's single-use and expires in 5 minutes.
+                        </p>
+
+                        {# AJAX form — stays in dashboard, no page navigation #}
+                        <div class="d-flex gap-2 mb-3">
+                            <input type="text" id="lookupCodeInput"
+                                   class="code-input flex-grow-1"
+                                   maxlength="6" placeholder="· · · · · ·"
+                                   autocomplete="off"
+                                   oninput="this.value=this.value.toUpperCase()"
+                                   onkeydown="if(event.key==='Enter') verifyCode()">
+                            <button onclick="verifyCode()"
+                                    id="verifyBtn"
+                                    class="btn rounded-pill fw-bold px-4"
+                                    style="background:#6f42c1; color:#fff; border:none; white-space:nowrap;">
+                                <i class="bi bi-shield-check me-1"></i> Verify
+                            </button>
+                        </div>
+
+                        {# Result area — shown after verification #}
+                        <div id="lookupResult" style="display:none;"></div>
+
+                        <div class="p-3 rounded-3 mt-2"
+                             style="background:#f8f9fa; font-size:.78rem; color:#8492a6;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Access is logged and visible to the patient.
+                            Code is invalidated after first use.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="sec-clinical" class="doc-section">
+        <div class="pcard">
+            <div class="pcard-head">
+                <span class="pcard-head-title"><i class="bi bi-file-medical me-2"></i>Clinical Records</span>
+                <div class="d-flex gap-2">
+                    <button onclick="showDocSection('triage')"
+                            class="btn btn-sm btn-outline-secondary rounded-pill"
+                            style="font-size:.72rem;">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Triage
+                    </button>
+                    <a href="{% url 'records:add_clinical_record' 0 %}"
+                       class="btn btn-sm rounded-pill fw-bold"
+                       style="background:var(--deep); color:#fff; border:none; font-size:.72rem;">
+                        <i class="bi bi-plus-circle me-1"></i> + Add Clinical Record
+                    </a>
+                </div>
+            </div>
+            <div class="p-0">
+                {% if clinical_records %}
+                <table class="doc-table px-3">
+                    <thead><tr>
+                        <th style="padding-left:1.2rem;">Patient</th>
+                        <th>Diagnosis</th><th>Hospital</th><th>Date</th><th>Prescription</th><th>Action</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for cr in clinical_records %}
+                        <tr>
+                            <td class="fw-bold">{{ cr.patient.get_full_name|default:cr.patient.username }}</td>
+                            <td>{{ cr.diagnosis|truncatechars:45 }}</td>
+                            <td style="color:#8492a6; font-size:.78rem;">{{ cr.hospital_name }}</td>
+                            <td style="font-size:.78rem;">{{ cr.date_diagnosed|date:"d M Y" }}</td>
+                            <td style="color:#8492a6; font-size:.76rem;">{{ cr.prescription|truncatechars:35|default:"—" }}</td>
+                            <td>
+                                <a href="{% url 'records:view_patient_history' cr.patient.id %}"
+                                   class="btn btn-sm btn-outline-primary rounded-2"
+                                   style="font-size:.7rem; padding:.2rem .65rem;">View patient</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state"><i class="bi bi-file-earmark-medical"></i>No clinical records yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+
+    <div id="sec-medical" class="doc-section">
+        <div class="pcard">
+            <div class="pcard-head">
+                <span class="pcard-head-title"><i class="bi bi-heart-pulse me-2" style="color:var(--c-critical);"></i>Medical Records — Vitals</span>
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <button onclick="showDocSection('triage')"
+                            class="btn btn-sm btn-outline-secondary rounded-pill"
+                            style="font-size:.72rem;">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Triage
+                    </button>
+                    <input type="text" placeholder="Search patient…"
+                           class="form-ctrl" style="max-width:200px; font-size:.75rem;"
+                           oninput="filterMedical(this.value)">
+                </div>
+            </div>
+            <div class="p-0">
+                {% if medical_records %}
+                <table class="doc-table" id="medTable" style="padding:0 .8rem;">
+                    <thead><tr>
+                        <th style="padding-left:1.2rem;">Patient</th>
+                        <th>Temp</th><th>HR</th><th>SpO₂</th><th>Glucose</th>
+                        <th>AI Score</th><th>Flag</th><th>Date</th><th>Action</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for mr in medical_records %}
+                        <tr data-patient="{{ mr.patient.get_full_name|lower|default:mr.patient.username|lower }}">
+                            <td>
+                                <div class="fw-bold">{{ mr.patient.get_full_name|default:mr.patient.username }}</div>
+                                <div style="font-size:.68rem; color:#8492a6;">PCHIS-{{ mr.patient.id|add:"1000" }}</div>
+                            </td>
+                            <td class="{% if mr.temperature > 38 %}text-danger fw-bold{% endif %}">{{ mr.temperature }}°</td>
+                            <td class="{% if mr.heart_rate > 100 %}text-warning fw-bold{% endif %}">{{ mr.heart_rate }}</td>
+                            <td class="{% if mr.oxygen_saturation < 95 %}text-danger fw-bold{% endif %}">{{ mr.oxygen_saturation }}%</td>
+                            <td class="{% if mr.blood_glucose > 7 %}text-warning fw-bold{% endif %}">{{ mr.blood_glucose }}</td>
+                            <td>
+                                <span class="risk-badge
+                                    {% if mr.ai_confidence_score >= 80 %}rb-critical
+                                    {% elif mr.ai_confidence_score >= 60 %}rb-high
+                                    {% elif mr.ai_confidence_score >= 35 %}rb-moderate
+                                    {% else %}rb-low{% endif %}">
+                                    {{ mr.ai_confidence_score }}%
+                                </span>
+                            </td>
+                            <td>
+                                {% if mr.needs_advanced_scan %}
+                                <span class="risk-badge rb-critical">Scan needed</span>
+                                {% else %}
+                                <span style="color:var(--c-low);">✓</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:.75rem; color:#8492a6;">{{ mr.uploaded_at|date:"d M Y" }}</td>
+                            <td>
+                                <a href="{% url 'records:view_patient_history' mr.patient.id %}"
+                                   class="btn btn-sm btn-outline-primary rounded-2"
+                                   style="font-size:.7rem; padding:.2rem .65rem;">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state"><i class="bi bi-clipboard2-pulse"></i>No vitals records yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+
+    <div id="sec-access_codes" class="doc-section">
+        <div class="pcard">
+            <div class="pcard-head">
+                <span class="pcard-head-title"><i class="bi bi-key me-2"></i>Patient Access Codes</span>
+                <span style="font-size:.75rem; color:#8492a6;">Single-use · 5 min expiry</span>
+            </div>
+            <div class="p-0">
+                {% if access_codes %}
+                <table class="doc-table px-3">
+                    <thead><tr>
+                        <th style="padding-left:1.2rem;">Patient</th>
+                        <th>Code</th><th>Status</th><th>Generated</th><th>Action</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for ac in access_codes %}
+                        <tr>
+                            <td class="fw-bold">{{ ac.patient.get_full_name|default:ac.patient.username }}</td>
+                            <td>
+                                <code style="font-size:.95rem; font-weight:700; letter-spacing:.2rem; color:#6f42c1;">
+                                    {{ ac.code }}
+                                </code>
+                            </td>
+                            <td>
+                                {% if ac.is_active %}
+                                <span class="status-pill sp-approved">Active</span>
+                                {% else %}
+                                <span class="status-pill sp-rejected">Used / Expired</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:.76rem; color:#8492a6;">{{ ac.created_at|date:"d M Y, H:i"|default:"—" }}</td>
+                            <td>
+                                {% if ac.is_active %}
+                                <form method="POST" action="{% url 'records:doctor_access_records' %}" style="margin:0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="access_code" value="{{ ac.code }}">
+                                    <button type="submit" class="btn btn-sm rounded-2 fw-bold"
+                                            style="background:#6f42c1; color:#fff; border:none; font-size:.7rem; padding:.2rem .65rem;">
+                                        Use code
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span style="font-size:.72rem; color:#8492a6;">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state"><i class="bi bi-key"></i>No access codes generated yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+
+    <div id="sec-messages" class="doc-section">
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="pcard">
+                    <div class="pcard-head">
+                        <span class="pcard-head-title"><i class="bi bi-inbox me-2"></i>Inbox</span>
+                        <a href="{% url 'messaging:inbox' %}"
+                           class="btn btn-sm btn-outline-primary rounded-pill" style="font-size:.72rem;">
+                            Open full inbox →
+                        </a>
+                    </div>
+                    <div class="px-1 py-1">
+                        {% if messages_preview %}
+                        {% for msg in messages_preview %}
+                        <a href="{% url 'messaging:inbox' %}" class="msg-row {% if not msg.is_read %}unread{% endif %}">
+                            <div class="msg-avatar">
+                                {{ msg.sender.first_name|first|upper }}{{ msg.sender.last_name|first|upper }}
+                            </div>
+                            <div class="flex-grow-1 min-width-0">
+                                <div class="d-flex justify-content-between">
+                                    <span style="font-size:.83rem; font-weight:600;">
+                                        {{ msg.sender.get_full_name|default:msg.sender.username }}
+                                        {% if not msg.is_read %}
+                                        <span class="badge ms-1" style="background:var(--deep); color:#fff; font-size:.55rem;">NEW</span>
+                                        {% endif %}
+                                    </span>
+                                    <span style="font-size:.68rem; color:#8492a6; white-space:nowrap;">{{ msg.timestamp|date:"H:i" }}</span>
+                                </div>
+                                <div style="font-size:.76rem; color:#8492a6; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:300px;">
+                                    {{ msg.body|truncatechars:60 }}
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                        {% else %}
+                        <div class="empty-state"><i class="bi bi-envelope"></i>No messages yet.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="pcard">
+                    <div class="pcard-head">
+                        <span class="pcard-head-title"><i class="bi bi-send me-2"></i>Quick Message</span>
+                    </div>
+                    <div class="pcard-body">
+                        <form method="POST" action="{% url 'messaging:inbox' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-lbl">To (patient username)</label>
+                                <input type="text" name="recipient" class="form-ctrl" placeholder="Search patient…" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-lbl">Message</label>
+                                <textarea name="body" class="form-ctrl" rows="4" placeholder="Type your message…" required></textarea>
+                            </div>
+                            <button type="submit" class="btn w-100 rounded-pill fw-bold"
+                                    style="background:var(--deep); color:#fff; border:none;">
+                                <i class="bi bi-send me-1"></i> Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>{# end doc-page #}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Triage card filter ── */
+function filterCards(btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const f = btn.dataset.filter;
+    document.querySelectorAll('.tcard').forEach(c => {
+        c.style.display = (f === 'ALL' || c.dataset.risk === f) ? '' : 'none';
+    });
+}
+
+/* ── Jump to triage with a filter pre-applied ── */
+function filterAndShow(risk) {
+    showDocSection('triage');
+    const btn = document.querySelector(`.filter-btn[data-filter="${risk}"]`);
+    if (btn) filterCards(btn);
+}
+
+/* ── Appointment approve/reject with instant UI feedback ── */
+function updateApptStatus(id, status, btn) {
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    }
+
+    fetch(`/appointments/api/status/${id}/`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ status: status })
+    })
+    .then(r => {
+        if (r.ok) {
+            const row = document.getElementById('appt-row-' + id);
+            if (row) {
+                const pillMap = {
+                    'APPROVED':    ['sp-approved',    'Approved'],
+                    'REJECTED':    ['sp-rejected',    'Rejected'],
+                    'IN PROGRESS': ['sp-in-progress', 'In Progress'],
+                };
+                const [cls, label] = pillMap[status] || ['sp-pending', status];
+                const pill = row.querySelector('.status-pill');
+                if (pill) {
+                    pill.className = 'status-pill ' + cls;
+                    pill.textContent = label;
+                }
+                if (status === 'APPROVED' || status === 'REJECTED') {
+                    const actionCell = row.querySelector('td:last-child .d-flex');
+                    if (actionCell) {
+                        actionCell.innerHTML = `<span style="font-size:.72rem; color:#8492a6;">${label}</span>`;
+                    }
+                }
+                row.style.background = '#f0fff8';
+                setTimeout(() => row.style.background = '', 1500);
+            }
+        } else {
+            alert('Update failed — check your appointments API endpoint.');
+            if (btn) { btn.disabled = false; btn.innerHTML = 'Retry'; }
+        }
+    })
+    .catch(e => {
+        console.error(e);
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Error'; }
+    });
+}
+
+/* ── Filter all-appointments table ── */
+function filterAppts(q) {
+    const lq = q.toLowerCase();
+    document.querySelectorAll('#allApptsTable tbody tr').forEach(row => {
+        const match = (row.dataset.patient || '').includes(lq);
+        row.style.display = match ? '' : 'none';
+    });
+}
+
+function filterApptStatus(status) {
+    document.querySelectorAll('#allApptsTable tbody tr').forEach(row => {
+        const match = !status || row.dataset.status === status;
+        row.style.display = match ? '' : 'none';
+    });
+}
+
+/* ── Quick Lookup: verify code via AJAX ── */
+function verifyCode() {
+    const input = document.getElementById('lookupCodeInput');
+    const btn   = document.getElementById('verifyBtn');
+    const result = document.getElementById('lookupResult');
+    const code  = input.value.trim().toUpperCase();
+
+    if (code.length < 6) {
+        result.style.display = 'block';
+        result.innerHTML = `
+            <div class="alert alert-warning rounded-3 py-2 px-3" style="font-size:.83rem;">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                Please enter the full 6-character code.
+            </div>`;
+        return;
+    }
+
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verifying...';
+    result.style.display = 'none';
+
+    fetch('{% url "records:doctor_access_records_api" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: JSON.stringify({ access_code: code })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-shield-check me-1"></i> Verify';
+        result.style.display = 'block';
+
+        if (data.success) {
+            result.innerHTML = `
+                <div class="pcard shadow-sm p-3 mb-2 bg-white rounded" style="border-left:4px solid #198754; border: 1px solid #eee;">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div style="width:44px;height:44px;border-radius:50%;
+                                    background:linear-gradient(135deg,#0a3d62,#6f42c1);
+                                    display:flex;align-items:center;justify-content:center;
+                                    color:#fff;font-weight:700;font-size:1rem;flex-shrink:0;">
+                            ${data.patient_initials}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold" style="font-size:1rem; color:#2d3436;">${data.patient_name}</div>
+                            <div style="font-size:.75rem;color:#8492a6;">
+                                PCHIS-${data.patient_id} · Access granted
+                            </div>
+                        </div>
+                        <span class="badge bg-success-soft text-success" style="font-size:.65rem; padding: 5px 10px; border-radius: 20px;">
+                            <i class="bi bi-check2-circle"></i> VERIFIED
+                        </span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="${data.history_url}" class="btn btn-sm fw-bold flex-grow-1" style="background:#0a3d62;color:#fff;border-radius:8px;">
+                            <i class="bi bi-clock-history me-1"></i> Medical History
+                        </a>
+                        <a href="${data.add_record_url}" class="btn btn-sm btn-outline-secondary fw-bold flex-grow-1" style="border-radius:8px;">
+                            <i class="bi bi-plus-circle me-1"></i> Add Record
+                        </a>
+                    </div>
+                </div>`;
+            input.value = '';
+        } else {
+            result.innerHTML = `
+                <div class="alert alert-danger rounded-3 py-2 px-3" style="font-size:.83rem;">
+                    <i class="bi bi-shield-x me-1"></i>
+                    ${data.error || 'Invalid or expired code. Please try again.'}
+                </div>`;
+        }
+    })
+    .catch(err => {
+        console.error("Verification error:", err);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-shield-check me-1"></i> Verify';
+        result.style.display = 'block';
+        result.innerHTML = `
+            <div class="alert alert-danger rounded-3 py-2 px-3" style="font-size:.83rem;">
+                <i class="bi bi-wifi-off me-1"></i> Connection error.
+            </div>`;
+    });
+}
+
+/* ── Medical records live search ── */
+function filterMedical(q) {
+    const lq = q.toLowerCase();
+    document.querySelectorAll('#medTable tbody tr').forEach(row => {
+        row.style.display = (row.dataset.patient || '').toLowerCase().includes(lq) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}
